@@ -1,4 +1,26 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+
+vi.mock('../server/db/client.ts', () => ({
+  prisma: {
+    user: {
+      findUnique: vi.fn(async ({ where }: { where: { id: string } }) => {
+        const isAdmin = where.id === 'test-admin-id';
+        return {
+          id: where.id,
+          username: isAdmin ? 'RootAdmin' : 'RegularUser',
+          email: isAdmin ? 'admin@test.invalid' : 'user@test.invalid',
+          role: isAdmin ? 'ADMIN' : 'USER',
+          rank: 1,
+          exp: 0,
+          balance: 0,
+          avatarUrl: null,
+          bio: null,
+        };
+      }),
+    },
+    $queryRaw: vi.fn().mockRejectedValue(new Error('database unavailable in unit test')),
+  },
+}));
 import http from 'http';
 import request from 'supertest';
 import { app } from '../server/app.ts';
