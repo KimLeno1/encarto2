@@ -6,9 +6,7 @@
  * even if app startup fails during configuration or Prisma initialization.
  * Never return secret values.
  */
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default function handler(_req: VercelRequest, res: VercelResponse) {
+export default function handler(_req: any, res: any) {
   const required = [
     'DATABASE_URL',
     'SESSION_SECRET',
