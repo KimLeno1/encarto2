@@ -160,12 +160,14 @@ export interface ShopItem {
   id: string;
   name: string;
   price: number;
-  type: 'merch' | 'plugin' | 'theme' | 'role' | 'decoration';
+  type: 'merch' | 'plugin' | 'theme' | 'role' | 'decoration' | 'team';
   image?: string;
   requirements?: {
     minRank?: number;
     minAge?: number;
+    roles?: Array<'USER' | 'MODERATOR' | 'ORGANIZER' | 'ADMIN'>;
   };
+  description?: string;
 }
 
 export interface ArticleData {
