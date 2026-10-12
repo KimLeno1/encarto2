@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 
 vi.mock('../server/db/client.ts', () => ({
+  checkDatabaseConnection: vi.fn().mockResolvedValue(false),
   prisma: {
     user: {
       findUnique: vi.fn(async ({ where }: { where: { id: string } }) => {
