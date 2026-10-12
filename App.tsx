@@ -287,7 +287,15 @@ const App: React.FC = () => {
       ownedItems: [...prev.ownedItems, item.id]
     }));
     // Theme ownership is separate from applying the palette. Newly acquired themes equip immediately.
-    if (item.type === 'theme' && item.themeKey) setTheme(item.themeKey);
+    if (item.type === 'theme' && item.themeKey) {
+      setTheme(item.themeKey);
+      setEditFields(prev => ({ ...prev, selectedTheme: item.themeKey! }));
+      if (profile.id) {
+        api.updateProfile(profile.id, { selectedTheme: item.themeKey }).catch(err => {
+          console.error('Failed to save selected theme:', err);
+        });
+      }
+    }
     // Role-related products are cosmetic or application passes only. Privileged roles
     // must be granted by the server/admin workflow, never by a client-side purchase.
     alert(`Successfully acquired ${item.name}!`);
