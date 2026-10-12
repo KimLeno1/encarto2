@@ -5,7 +5,7 @@
  * routers at /api/auth, /api/admin, /api/progression, and /api/matchmaking.
  * Do not start an HTTP listener or attach Socket.IO in a serverless function.
  */
-import { app } from '../server/app.ts';
+import { app } from '../server/app.js';
 
 export default app;
 
