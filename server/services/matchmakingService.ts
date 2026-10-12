@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { MatchPersistenceService } from './matchPersistenceService.ts';
+import { MatchPersistenceService } from './matchPersistenceService.js';
 
 export interface QueuedPlayer {
   userId: string;
