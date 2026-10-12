@@ -1,84 +1,40 @@
 # Encarto Gaming Hub & Arena
 
-Encarto is a high-performance multi-game platform featuring **Encarto Arena** (real-time 2D multiplayer PvP with Socket.IO matchmaking and bot fallback), persistent player progression (XP, levels, rank tiers, match history), and a secure administration dashboard with full audit logging.
+Encarto is a multi-game platform featuring Encarto Arena, player progression, multiplayer experiences, and administration tools.
+
+## Desktop installers
+
+Encarto desktop packages are built by the GitHub Actions workflow **Build Encarto desktop installers** for Windows (NSIS `.exe`), macOS (`.dmg`), and Debian/Ubuntu Linux (`.deb`).
+
+- Open the repository's **Actions** tab and run **Build Encarto desktop installers** manually to produce downloadable workflow artifacts.
+- To publish installers as a GitHub Release, push a version tag such as `v1.0.0`. The release workflow attaches all three platform installers.
+- The desktop app currently opens the hosted Encarto service at `https://encarto.vercel.app`. It is a desktop wrapper, not an offline copy: an internet connection and the deployed Encarto service are required. API, database, and multiplayer services remain hosted.
+- External HTTPS links open in the system browser. The desktop window disables Node integration and uses context isolation and Chromium sandboxing.
 
 ## Tech Stack
+
 - **Frontend**: React 19, Vite, Tailwind CSS, Lucide Icons, Socket.IO Client, Phaser.
 - **Backend**: Node.js, Express 5, TypeScript, Socket.IO.
-- **Database & ORM**: PostgreSQL (compatible with **Neon** serverless Postgres), Prisma ORM.
-- **Authentication**: Secure cookie-based session authentication with role-based access control (USER, MODERATOR, ORGANIZER, ADMIN).
+- **Database & ORM**: PostgreSQL (compatible with Neon serverless Postgres), Prisma ORM.
+- **Authentication**: Cookie-based sessions with role-based access control.
 - **Testing**: Vitest, Supertest.
-
----
 
 ## Getting Started & Local Setup
 
 ### Prerequisites
-- Node.js (v18+)
-- PostgreSQL database (e.g., **Neon** Postgres database connection string)
+
+- Node.js 22 recommended
+- PostgreSQL database (for example, Neon Postgres)
 
 ### Environment Configuration
-Copy `.env.example` to `.env` and configure your database URL:
+
+Copy `.env.example` to `.env` and configure the database URL. Never commit `.env` or production credentials. Production requires unique session secrets and admin credentials.
+
 ```bash
 cp .env.example .env
+npm install
+npx prisma generate
+npm test
+npm run lint
+npm run build
 ```
-
-Example development configuration (replace the placeholders before provisioning an admin):
-```env
-PORT=3000
-NODE_ENV=development
-APP_URL=http://localhost:3000
-DATABASE_URL=postgresql://user:password@localhost:5432/encarto_db?schema=public
-SESSION_SECRET=replace-with-random-32-plus-character-secret
-CORS_ORIGIN=http://localhost:3000,http://localhost:5173
-ADMIN_USERNAME=replace-with-admin-username
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=replace-with-unique-password-at-least-16-chars
-```
-
-Never commit `.env` or production credentials. Production requires explicit, unique values; placeholder/default session secrets and admin passwords are rejected. Admin provisioning creates a new account only and refuses to promote or overwrite an existing account.
-
-### Deployment architecture warning
-
-This repository's build script runs `vite build`, while `server.ts` starts a persistent Express + Socket.IO HTTP server. The repository currently has no Vercel function entrypoint or `vercel.json` routing configuration. A standard Vercel static/Vite deployment does **not** automatically start `server.ts`; API and Socket.IO functionality therefore needs explicit deployment verification. Use a persistent Node.js host for the Express/Socket.IO server, or design and test a compatible deployment architecture before relying on these endpoints in production.
-
-### Installation & Database Migration
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Run database migrations and seed initial data:
-   ```bash
-   npx prisma migrate dev --name init
-   npm run seed:admin
-   ```
-
-### Running the Application
-- **Development Server** (Express backend + Vite frontend middleware on port 3000):
-  ```bash
-  npm run dev
-  ```
-- **Production Build**:
-  ```bash
-  npm run build
-  npm start
-  ```
-- **Run Automated Test Suite**:
-  ```bash
-  npm test
-  ```
-
----
-
-## Key Features
-1. **Real-Time Multiplayer PvP & Matchmaking**:
-   - Queue-based matchmaking with configurable timeouts.
-   - Bot match fallback option with explicit AI practice labeling.
-   - Server-authoritative gameplay synchronization (movement, combat, health, score).
-2. **Player Progression & Records**:
-   - Automated XP award and rank tier progression upon completed matches.
-   - Detailed match history, statistics, and idempotent transaction records.
-3. **Administration Dashboard**:
-   - Account inspection, suspension/reactivation, role management.
-   - Game availability configuration, bot difficulty parameters, progression rules.
-   - Real-time system health and audit log inspection.
