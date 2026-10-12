@@ -1,10 +1,10 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
-import { verifySessionToken } from '../utils/session.ts';
-import { env } from '../config/env.ts';
-import { matchmakingService, MatchSession } from '../services/matchmakingService.ts';
-import { ArenaAuthoritativeSession } from '../game/arenaAuthoritativeSession.ts';
-import { playerInputSchema, attackInputSchema } from '../validators/matchmaking.ts';
+import { verifySessionToken } from '../utils/session.js';
+import { env } from '../config/env.js';
+import { matchmakingService, MatchSession } from '../services/matchmakingService.js';
+import { ArenaAuthoritativeSession } from '../game/arenaAuthoritativeSession.js';
+import { playerInputSchema, attackInputSchema } from '../validators/matchmaking.js';
 
 // Map of active authoritative sessions: matchId -> ArenaAuthoritativeSession
 export const activeGameSessions = new Map<string, ArenaAuthoritativeSession>();
