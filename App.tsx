@@ -251,6 +251,32 @@ const App: React.FC = () => {
   };
 
   const handlePurchase = (item: ShopItem) => {
+    const requirements = item.requirements;
+    const role = profile.role || 'USER';
+    const birthDate = profile.birthday ? new Date(profile.birthday) : null;
+    let age = 0;
+    if (birthDate && !Number.isNaN(birthDate.getTime())) {
+      const today = new Date();
+      age = today.getFullYear() - birthDate.getFullYear();
+      if (today.getMonth() < birthDate.getMonth() ||
+        (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) age--;
+    }
+    if (profile.ownedItems.includes(item.id)) {
+      alert('You already own this item.');
+      return;
+    }
+    if (requirements?.minRank && profile.rank < requirements.minRank) {
+      alert(`Reach Rank ${requirements.minRank} to unlock this item.`);
+      return;
+    }
+    if (requirements?.minAge && age < requirements.minAge) {
+      alert(`This item requires you to be ${requirements.minAge} or older.`);
+      return;
+    }
+    if (requirements?.roles?.length && !requirements.roles.includes(role)) {
+      alert(`This item requires one of these roles: ${requirements.roles.join(', ')}.`);
+      return;
+    }
     if (profile.balance < item.price) {
       alert("Insufficient M3GA coins!");
       return;
@@ -260,7 +286,30 @@ const App: React.FC = () => {
       balance: prev.balance - item.price,
       ownedItems: [...prev.ownedItems, item.id]
     }));
+    // Theme ownership is separate from applying the palette. Newly acquired themes equip immediately.
+    if (item.type === 'theme' && item.themeKey) {
+      setTheme(item.themeKey);
+      setEditFields(prev => ({ ...prev, selectedTheme: item.themeKey! }));
+      if (profile.id) {
+        api.updateProfile(profile.id, { selectedTheme: item.themeKey }).catch(err => {
+          console.error('Failed to save selected theme:', err);
+        });
+      }
+    }
+    // Role-related products are cosmetic or application passes only. Privileged roles
+    // must be granted by the server/admin workflow, never by a client-side purchase.
     alert(`Successfully acquired ${item.name}!`);
+  };
+
+  const handleEquipTheme = (item: ShopItem) => {
+    if (item.type !== 'theme' || !item.themeKey || !profile.ownedItems.includes(item.id)) return;
+    setTheme(item.themeKey);
+    setEditFields(prev => ({ ...prev, selectedTheme: item.themeKey! }));
+    if (profile.id) {
+      api.updateProfile(profile.id, { selectedTheme: item.themeKey }).catch(err => {
+        console.error('Failed to save selected theme:', err);
+      });
+    }
   };
 
   const handleRegisterTournament = (tournament: Tournament) => {
@@ -532,7 +581,7 @@ const App: React.FC = () => {
         )}
         {activePanel === PanelType.STORE && (
           loadingPanels[PanelType.STORE] ? <SectionLoader message="Opening Armory Vault..." /> : 
-          <StorePanel items={SHOP_ITEMS} profile={profile} onPurchase={handlePurchase} />
+          <StorePanel items={SHOP_ITEMS} profile={profile} onPurchase={handlePurchase} onEquip={handleEquipTheme} />
         )}
         {activePanel === PanelType.HALL_OF_FAME && (
           loadingPanels[PanelType.HALL_OF_FAME] ? <SectionLoader message="Recalling Legends..." /> : 
@@ -577,17 +626,22 @@ const App: React.FC = () => {
           {showMoreMenu && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-72 glass-panel rounded-[2.5rem] border border-white/10 shadow-2xl overflow-y-auto max-h-[60vh] custom-scrollbar py-3 animate-in slide-in-from-bottom-4 fade-in duration-300 z-[160]">
               <div className="px-8 py-3 border-b border-white/5 mb-2 sticky top-0 bg-black/40 backdrop-blur-md z-10"><p className="text-[10px] font-black text-primary uppercase tracking-[0.25em]">Access Systems</p></div>
-              {hasOrganizerRole && <MoreMenuItem icon={<ShieldCheck />} label="Host Console" active={activePanel === PanelType.ORGANIZER} onClick={() => { setActivePanel(PanelType.ORGANIZER); setShowMoreMenu(false); }} />}
+              <div className="px-8 pt-3 pb-1 text-[9px] font-black uppercase tracking-[0.25em] text-sky-200/80">Compete</div>
               <MoreMenuItem icon={<Swords />} label="Encarto Arena" active={activePanel === PanelType.ARENA} onClick={() => { setActivePanel(PanelType.ARENA); setShowMoreMenu(false); }} />
               <MoreMenuItem icon={<Trophy />} label="Tournaments" active={activePanel === PanelType.TOURNAMENTS} onClick={() => { setActivePanel(PanelType.TOURNAMENTS); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<Medal />} label="Hall of Fame" active={activePanel === PanelType.HALL_OF_FAME} onClick={() => { setActivePanel(PanelType.HALL_OF_FAME); setShowMoreMenu(false); }} />
               <MoreMenuItem icon={<CalendarDays />} label="Fixtures" active={activePanel === PanelType.FIXTURES} onClick={() => { setActivePanel(PanelType.FIXTURES); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<Users />} label="Squad Hub" active={activePanel === PanelType.TEAMS} onClick={() => { setActivePanel(PanelType.TEAMS); setShowMoreMenu(false); }} />
               <MoreMenuItem icon={<Swords />} label="Skill Duels" active={activePanel === PanelType.PVP} onClick={() => { setActivePanel(PanelType.PVP); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<MonitorPlay />} label="Stream Hub" active={activePanel === PanelType.STREAMING} onClick={() => { setActivePanel(PanelType.STREAMING); setShowMoreMenu(false); }} />
+              <MoreMenuItem icon={<Medal />} label="Hall of Fame" active={activePanel === PanelType.HALL_OF_FAME} onClick={() => { setActivePanel(PanelType.HALL_OF_FAME); setShowMoreMenu(false); }} />
+              <div className="mx-6 my-2 border-t border-white/[.06]" />
+              <div className="px-8 pt-2 pb-1 text-[9px] font-black uppercase tracking-[0.25em] text-violet-200/80">Community</div>
+              <MoreMenuItem icon={<Users />} label="Squad Hub" active={activePanel === PanelType.TEAMS} onClick={() => { setActivePanel(PanelType.TEAMS); setShowMoreMenu(false); }} />
               <MoreMenuItem icon={<Newspaper />} label="News Feed" active={activePanel === PanelType.BLOG} onClick={() => { setActivePanel(PanelType.BLOG); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<Bell />} label="Comms" active={activePanel === PanelType.NOTIFICATIONS} onClick={() => { setActivePanel(PanelType.NOTIFICATIONS); setShowHeaderNotifications(false); }} />
+              <MoreMenuItem icon={<MonitorPlay />} label="Stream Hub" active={activePanel === PanelType.STREAMING} onClick={() => { setActivePanel(PanelType.STREAMING); setShowMoreMenu(false); }} />
               <MoreMenuItem icon={<MessageSquare />} label="Chat Hub" active={activePanel === PanelType.CHAT} onClick={() => { setActivePanel(PanelType.CHAT); setShowMoreMenu(false); }} />
+              <MoreMenuItem icon={<Bell />} label="Comms" active={activePanel === PanelType.NOTIFICATIONS} onClick={() => { setActivePanel(PanelType.NOTIFICATIONS); setShowHeaderNotifications(false); setShowMoreMenu(false); }} />
+              <div className="mx-6 my-2 border-t border-white/[.06]" />
+              <div className="px-8 pt-2 pb-1 text-[9px] font-black uppercase tracking-[0.25em] text-fuchsia-200/80">Platform</div>
+              {hasOrganizerRole && <MoreMenuItem icon={<ShieldCheck />} label="Host Console" active={activePanel === PanelType.ORGANIZER} onClick={() => { setActivePanel(PanelType.ORGANIZER); setShowMoreMenu(false); }} />}
             </div>
           )}
         </div>

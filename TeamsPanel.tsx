@@ -23,7 +23,8 @@ const TeamsPanel: React.FC<TeamsPanelProps> = ({
   isCreatingTeam, setIsCreatingTeam, newTeamData, setNewTeamData,
   handleCreateTeam, handleRequestToJoin, handleActionOnRequest
 }) => {
-  const filteredTeams = teams.filter(t => t.name.toLowerCase().includes(teamSearchQuery.toLowerCase()));
+  const query = teamSearchQuery.trim().toLowerCase();
+  const filteredTeams = teams.filter(t => !query || `${t.name} ${t.about} ${t.info} ${t.leaderId}`.toLowerCase().includes(query));
 
   return (
     <div className="max-w-6xl mx-auto space-y-12 animate-in slide-in-from-bottom-4 duration-300 pb-12">
@@ -114,7 +115,7 @@ const TeamsPanel: React.FC<TeamsPanelProps> = ({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div>
               <h2 className="anime-title text-5xl text-white uppercase tracking-tight">The Squad Hub</h2>
-              <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mt-2">Find a home or lead your own legion</p>
+              <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mt-2">Find a home, recruit teammates, or lead your own legion</p>
             </div>
             <button onClick={() => setIsCreatingTeam(true)} className="px-8 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
               <Plus size={16} /> Forge a Squad
@@ -156,9 +157,11 @@ const TeamsPanel: React.FC<TeamsPanelProps> = ({
           <div className="space-y-6">
             <div className="relative group max-w-xl">
               <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={20} />
-              <input type="text" placeholder="Search squads by name..." value={teamSearchQuery} onChange={(e) => setTeamSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-[2rem] py-6 pl-16 pr-8 text-sm font-bold text-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all" />
+              <input type="text" placeholder="Search squads, games, leaders, or recruitment info..." value={teamSearchQuery} onChange={(e) => setTeamSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-[2rem] py-6 pl-16 pr-8 text-sm font-bold text-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all" />
             </div>
 
+            <div className="flex items-center justify-between gap-4 text-[10px] font-black uppercase tracking-widest text-gray-600"><span>Squad directory</span><span>{filteredTeams.length} squad{filteredTeams.length === 1 ? '' : 's'} found</span></div>
+            {filteredTeams.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm text-gray-500">No squads match that search. Try a game title or team leader.</div>}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredTeams.map(team => (
                 <div key={team.id} className="glass-panel rounded-[2.5rem] overflow-hidden flex flex-col border border-white/5 hover:border-primary/30 transition-all group">

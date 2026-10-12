@@ -3,7 +3,7 @@ import React from 'react';
 import { Loader2, Zap } from 'lucide-react';
 
 export const LogoComponent = ({ className = "w-10 h-10" }: { className?: string }) => (
-  <div className={`${className} bg-primary rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)] border border-white/20 transition-all`}>
+  <div className={`${className} bg-gradient-to-br from-violet-500 via-purple-600 to-sky-500 rounded-xl flex items-center justify-center shadow-[0_0_24px_rgba(139,92,246,0.3)] border border-white/20 transition-all`}>
     <Zap className="text-white fill-current" size={20} />
   </div>
 );
@@ -19,8 +19,8 @@ export const SectionLoader = ({ message }: { message: string }) => (
 );
 
 export const NavButton = ({ icon, label, active, onClick, className = "" }: any) => (
-  <button onClick={onClick} className={`flex flex-col items-center gap-1 p-2 transition-all ${active ? 'text-primary scale-110' : 'text-gray-500'} ${className}`}>
-    <div className={`p-2 rounded-xl ${active ? 'bg-primary/10' : ''}`}>{React.cloneElement(icon, { size: 24 })}</div>
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 p-2 transition-all ${active ? 'text-violet-200 scale-105' : 'text-slate-500 hover:text-slate-200'} ${className}`}>
+    <div className={`p-2 rounded-xl ${active ? 'bg-violet-400/10 ring-1 ring-violet-300/20' : ''}`}>{React.cloneElement(icon, { size: 24 })}</div>
     <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
   </button>
 );

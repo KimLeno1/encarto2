@@ -52,20 +52,20 @@ const LobbyPanel: React.FC<LobbyPanelProps> = ({
   const liveStreams = streams.filter(s => s.isLive).slice(0, 2);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-500 pb-24">
+    <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in duration-500 pb-24 px-1 sm:px-2">
       {/* Redesigned Motto Section */}
-      <div className="text-center py-6">
+      <div className="text-center py-3 sm:py-5">
         <div className="inline-block relative">
           <h2 
             style={{ 
               fontFamily: 'Impact, fantasy', 
-              color: 'black', 
+              color: '#f5f3ff', 
               textDecoration: 'underline', 
-              textDecorationColor: '#00f2ff',
+              textDecorationColor: '#38bdf8',
               textUnderlineOffset: '8px',
               textDecorationThickness: '3px'
             }} 
-            className="text-3xl md:text-4xl font-black italic uppercase leading-tight drop-shadow-[0_0_8px_rgba(0,242,255,0.4)] tracking-wide"
+            className="text-3xl md:text-4xl font-black italic uppercase leading-tight drop-shadow-[0_0_18px_rgba(139,92,246,0.28)] tracking-wide"
           >
             "tell the world that i am here"
           </h2>
@@ -73,7 +73,7 @@ const LobbyPanel: React.FC<LobbyPanelProps> = ({
       </div>
 
       {/* Profile Card */}
-      <div className="glass-panel p-10 rounded-[3rem] border-2 border-primary/20 flex flex-col md:flex-row items-center gap-10 shadow-2xl shadow-primary/10 relative overflow-hidden group">
+      <div className="glass-panel p-6 sm:p-8 md:p-10 rounded-[2rem] border border-violet-300/20 flex flex-col md:flex-row items-center gap-7 md:gap-10 shadow-2xl shadow-violet-950/20 relative overflow-hidden group">
         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity rotate-12">
           <Crown size={180} />
         </div>
@@ -126,7 +126,7 @@ const LobbyPanel: React.FC<LobbyPanelProps> = ({
       {/* Top 3 Hall of Fame */}
       <section className="space-y-6">
         <div className="flex items-center justify-between px-2">
-          <h4 className="anime-title text-2xl uppercase flex items-center gap-3"><Medal size={20} className="text-yellow-500" /> Current Sovereigns</h4>
+          <h4 className="anime-title text-xl sm:text-2xl uppercase flex items-center gap-3"><Medal size={20} className="text-yellow-500" /> Current Sovereigns</h4>
           <button onClick={() => onPanelChange(PanelType.HALL_OF_FAME)} className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1 group">Full Gallery <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" /></button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

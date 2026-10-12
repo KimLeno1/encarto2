@@ -9,14 +9,26 @@ export const ALL_BADGES: Badge[] = [
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [
-  { id: 'role-organizer', name: 'Organizer License', price: 500, type: 'role', requirements: { minRank: 15, minAge: 18 } },
-  { id: 't1', name: 'One Piece Theme', price: 10, type: 'theme' },
-  { id: 't2', name: 'Naruto Theme', price: 10, type: 'theme' },
-  { id: 'p1', name: 'Tournament Tracker', price: 15, type: 'plugin' },
-  { id: 'm1', name: 'Encarto Hoodie', price: 45, type: 'merch' },
-  { id: 'd1', name: 'Neon Plasma Border', price: 20, type: 'decoration' },
-  { id: 'd2', name: 'Golden Aura', price: 50, type: 'decoration' },
-  { id: 'p2', name: 'Match Analyzer', price: 30, type: 'plugin' },
+  { id: 'team-starter-kit', name: 'Squad Founder Kit', price: 180, type: 'team', description: 'A launch pack for your first competitive squad: team banner, roster card, and recruitment listing.', requirements: { minRank: 3 } },
+  { id: 'team-brand-kit', name: 'Neon Team Identity', price: 260, type: 'team', description: 'A coordinated banner and profile accent for established teams.', requirements: { minRank: 6 } },
+  { id: 'team-pro-slot', name: 'Expanded Team Roster', price: 420, type: 'team', description: 'An account unlock for teams that need more room. Team creation and membership still follow platform rules.', requirements: { minRank: 10, roles: ['ORGANIZER', 'MODERATOR', 'ADMIN'] } },
+  { id: 'role-organizer', name: 'Organizer Application Pass', price: 500, type: 'role', description: 'Unlocks the organizer application flow. Buying this pass does not grant elevated permissions; staff approval is required.', requirements: { minRank: 15, minAge: 18 } },
+  { id: 'role-verified-captain', name: 'Captain Identity Badge', price: 220, type: 'role', description: 'A profile identity badge for team captains. It does not change your account permissions.', requirements: { minRank: 7 } },
+  { id: 't1', name: 'One Piece: Grand Line', price: 10, type: 'theme', themeKey: 'onepiece', description: 'Ocean-blue surfaces with warm treasure-gold highlights.', requirements: { minRank: 1 } },
+  { id: 't2', name: 'Naruto: Hidden Leaf', price: 10, type: 'theme', themeKey: 'naruto', description: 'A high-energy orange and ember palette for your dashboard.', requirements: { minRank: 1 } },
+  { id: 't3', name: 'Violet Rift', price: 35, type: 'theme', themeKey: 'violet-rift', description: 'The signature premium neon-purple and electric-blue look.', requirements: { minRank: 4 } },
+  { id: 't4', name: 'Cyberwave', price: 45, type: 'theme', themeKey: 'cyberwave', description: 'A high-contrast cyber-cyan palette with deep midnight surfaces.', requirements: { minRank: 5 } },
+  { id: 't5', name: 'Arctic Pulse', price: 45, type: 'theme', themeKey: 'arctic-pulse', description: 'Cool ice-blue highlights and crisp, glacial surfaces.', requirements: { minRank: 5 } },
+  { id: 't6', name: 'Emberstorm', price: 60, type: 'theme', themeKey: 'emberstorm', description: 'A fiery amber-red interface for players who bring the heat.', requirements: { minRank: 7 } },
+  { id: 't7', name: 'Sakura Bloom', price: 60, type: 'theme', themeKey: 'sakura-bloom', description: 'A soft neon-rose and orchid palette with dark glass surfaces.', requirements: { minRank: 7 } },
+  { id: 'p1', name: 'Tournament Tracker', price: 15, type: 'plugin', description: 'Keep upcoming fixtures and tournament dates close at hand.', requirements: { minRank: 1 } },
+  { id: 'm1', name: 'Encarto Hoodie', price: 450, type: 'merch', description: 'Official Encarto apparel. Physical fulfilment must be confirmed at checkout.', requirements: { minRank: 2 } },
+  { id: 'm2', name: 'Arena Desk Mat', price: 300, type: 'merch', description: 'A wide desk mat for your setup. Availability and shipping are confirmed separately.', requirements: { minRank: 3 } },
+  { id: 'd1', name: 'Neon Plasma Border', price: 20, type: 'decoration', description: 'A vivid neon frame for your player identity.', requirements: { minRank: 1 } },
+  { id: 'd2', name: 'Golden Aura', price: 50, type: 'decoration', description: 'A warm gold profile aura for standout players.', requirements: { minRank: 5 } },
+  { id: 'd3', name: 'Cyber Crown', price: 120, type: 'decoration', description: 'An animated-style crown treatment for veteran profiles.', requirements: { minRank: 10 } },
+  { id: 'p2', name: 'Match Analyzer', price: 90, type: 'plugin', description: 'A match review utility for players and team staff.', requirements: { minRank: 6, roles: ['USER', 'MODERATOR', 'ORGANIZER', 'ADMIN'] } },
+  { id: 'p3', name: 'Team Strategy Board', price: 160, type: 'plugin', description: 'A planning utility reserved for team leaders and organizers.', requirements: { minRank: 8, roles: ['ORGANIZER', 'MODERATOR', 'ADMIN'] } },
 ];
 
 export const AVATAR_OPTIONS = [

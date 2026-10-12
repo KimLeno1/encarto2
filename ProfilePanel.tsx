@@ -99,9 +99,14 @@ const ProfilePanel: React.FC<ProfilePanelProps> = ({
   };
 
   const THEME_OPTIONS: { id: AnimeTheme; label: string; color: string; shopId?: string }[] = useMemo(() => [
-    { id: 'mha', label: 'Plus Ultra (MHA)', color: 'bg-blue-600' },
-    { id: 'onepiece', label: 'Grand Line (OP)', color: 'bg-yellow-600', shopId: 't1' },
-    { id: 'naruto', label: 'Hidden Leaf (Naruto)', color: 'bg-orange-600', shopId: 't2' },
+    { id: 'mha', label: 'Plus Ultra (MHA)', color: 'bg-violet-600' },
+    { id: 'onepiece', label: 'Grand Line', color: 'bg-cyan-600', shopId: 't1' },
+    { id: 'naruto', label: 'Hidden Leaf', color: 'bg-orange-600', shopId: 't2' },
+    { id: 'violet-rift', label: 'Violet Rift', color: 'bg-violet-500', shopId: 't3' },
+    { id: 'cyberwave', label: 'Cyberwave', color: 'bg-cyan-500', shopId: 't4' },
+    { id: 'arctic-pulse', label: 'Arctic Pulse', color: 'bg-sky-400', shopId: 't5' },
+    { id: 'emberstorm', label: 'Emberstorm', color: 'bg-orange-500', shopId: 't6' },
+    { id: 'sakura-bloom', label: 'Sakura Bloom', color: 'bg-pink-500', shopId: 't7' },
   ], []);
 
   const isThemeOwned = (shopId?: string) => {

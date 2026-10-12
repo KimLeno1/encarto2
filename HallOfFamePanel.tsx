@@ -1,12 +1,16 @@
 
-import React from 'react';
-import { Trophy, Star, Crown, Medal } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, ArrowDownUp, Trophy, Star, Crown, Medal } from 'lucide-react';
 import { HallOfFameEntry } from './types';
 import { MOCK_HALL_OF_FAME } from './mockData';
 
 const HallOfFamePanel: React.FC = () => {
-  // Ensure we only ever show 10 entries, latest first
-  const entries = MOCK_HALL_OF_FAME.slice(0, 10);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'recent' | 'rank'>('recent');
+  const entries = MOCK_HALL_OF_FAME
+    .filter(entry => `${entry.winnerName} ${entry.tournamentName}`.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    .sort((a, b) => sortBy === 'rank' ? b.rankAtWin - a.rankAtWin : b.date.localeCompare(a.date))
+    .slice(0, 10);
 
   return (
     <div className="max-w-7xl mx-auto min-h-screen animate-in fade-in duration-700 pb-24 relative">
@@ -26,15 +30,29 @@ const HallOfFamePanel: React.FC = () => {
             <Crown size={48} className="text-yellow-500" />
           </div>
           <h2 className="anime-title text-7xl md:text-8xl text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(250,204,21,0.4)]">
-            Hall of Souls
+            Hall of Fame
           </h2>
           <p className="text-gray-400 text-xs font-black uppercase tracking-[0.5em]">Where Legends Are Written in Neon</p>
         </header>
 
+        <section className="mx-4 grid gap-4 rounded-3xl border border-violet-300/15 bg-[#0c0c1c]/80 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+          <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+            <Search size={17} className="text-violet-200" />
+            <input value={searchQuery} onChange={event => setSearchQuery(event.target.value)} placeholder="Search champions or tournaments..." aria-label="Search Hall of Fame" className="w-full border-0 bg-transparent text-sm outline-none focus:ring-0" />
+          </label>
+          <label className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-xs font-bold text-slate-300">
+            <ArrowDownUp size={15} className="text-sky-200" />
+            <span>Sort</span>
+            <select value={sortBy} onChange={event => setSortBy(event.target.value as 'recent' | 'rank')} aria-label="Sort Hall of Fame" className="border-0 bg-transparent text-sm outline-none focus:ring-0">
+              <option value="recent">Most recent</option><option value="rank">Highest rank</option>
+            </select>
+          </label>
+        </section>
+        {entries.length === 0 ? <div className="mx-4 rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm text-slate-400">No legends match that search. Try a champion name or tournament title.</div> : null}
         <div className="grid lg:grid-cols-2 gap-8 px-4">
           {entries.map((entry, idx) => (
             <div 
-              key={idx} 
+              key={`${entry.winnerName}-${entry.tournamentName}`} 
               className={`glass-panel rounded-[2.5rem] border-2 transition-all duration-500 overflow-hidden group hover:scale-[1.02] ${
                 idx === 0 
                   ? 'border-yellow-500/50 bg-gradient-to-br from-yellow-500/10 via-black/60 to-black/60 shadow-[0_0_40px_rgba(250,204,21,0.15)]' 

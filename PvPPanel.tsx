@@ -63,6 +63,10 @@ const PvPPanel: React.FC<{ profile: PlayerProfile }> = ({ profile }) => {
   }, []);
 
   const handleCreateOffer = () => {
+    if (!Number.isFinite(newOffer.wager) || newOffer.wager <= 0) {
+      alert('Enter a positive M3GA wager.');
+      return;
+    }
     if (newOffer.wager > profile.balance) {
       alert("Insufficient M3GA coins!");
       return;
@@ -84,7 +88,14 @@ const PvPPanel: React.FC<{ profile: PlayerProfile }> = ({ profile }) => {
   const handleAction = (offerId: string, action: 'accept' | 'decline' | 'counter' | 'enter') => {
     if (action === 'counter') {
       const amount = prompt("Enter your counter wager (M3GA):");
-      if (!amount || isNaN(Number(amount))) return;
+      if (!amount || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+        alert('Counter wagers must be a positive number.');
+        return;
+      }
+      if (Number(amount) > profile.balance) {
+        alert('Your counter wager cannot exceed your available M3GA balance.');
+        return;
+      }
       setOffers(prev => prev.map(o => o.id === offerId ? { ...o, wager: Number(amount), status: 'countered', lastCounterBy: profile.name } : o));
       return;
     }

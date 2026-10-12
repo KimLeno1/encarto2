@@ -9,10 +9,11 @@ interface BlogPanelProps {
 
 const BlogPanel: React.FC<BlogPanelProps> = ({ posts }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [activePost, setActivePost] = useState<BlogPost | null>(null);
 
   const filteredPosts = useMemo(() => {
     return [...posts]
-      .filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter(p => !searchQuery.trim() || `${p.title} ${p.excerpt} ${p.category} ${p.author}`.toLowerCase().includes(searchQuery.trim().toLowerCase()))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [posts, searchQuery]);
 
@@ -67,7 +68,7 @@ const BlogPanel: React.FC<BlogPanelProps> = ({ posts }) => {
 
       {/* Featured Post */}
       {!searchQuery && featuredPost && (
-        <section className="glass-panel rounded-[3.5rem] overflow-hidden border border-white/10 shadow-2xl relative group cursor-pointer hover:border-primary/40 transition-all duration-500">
+        <section onClick={() => { if (featuredPost) setActivePost(featuredPost); }} className="glass-panel rounded-[3.5rem] overflow-hidden border border-white/10 shadow-2xl relative group cursor-pointer hover:border-primary/40 transition-all duration-500">
           <div className="grid lg:grid-cols-2">
             <div className="h-80 lg:h-auto relative overflow-hidden">
               <img src={featuredPost.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2000ms]" alt="Featured" />
@@ -90,9 +91,9 @@ const BlogPanel: React.FC<BlogPanelProps> = ({ posts }) => {
                     <span className="text-[8px] font-black text-gray-600 uppercase">Senior Analyst</span>
                   </div>
                 </div>
-                <button className="p-4 bg-primary text-white rounded-full shadow-xl shadow-primary/20 hover:scale-110 transition-all">
+                <span className="p-4 bg-primary text-white rounded-full shadow-xl shadow-primary/20">
                   <ChevronRight size={24} />
-                </button>
+                </span>
               </div>
             </div>
           </div>
@@ -102,7 +103,7 @@ const BlogPanel: React.FC<BlogPanelProps> = ({ posts }) => {
       {/* Grid Posts */}
       <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         {gridPosts.map((post, idx) => (
-          <div key={post.id} className="glass-panel rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col group hover:border-primary/30 transition-all">
+          <button type="button" key={post.id} onClick={() => setActivePost(post)} className="text-left glass-panel rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col group hover:border-primary/30 transition-all">
             <div className="h-56 relative overflow-hidden">
               <img src={post.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="Blog" />
               <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-40" />
@@ -128,7 +129,7 @@ const BlogPanel: React.FC<BlogPanelProps> = ({ posts }) => {
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         ))}
 
         {/* Dynamic Ad Placement within Grid */}
@@ -144,6 +145,20 @@ const BlogPanel: React.FC<BlogPanelProps> = ({ posts }) => {
         </div>
       </section>
 
+      {activePost && (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-label={activePost.title} onClick={() => setActivePost(null)}>
+          <article className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-violet-300/20 bg-[#0b0b19] shadow-2xl" onClick={event => event.stopPropagation()}>
+            <img src={activePost.image} alt="" className="h-56 w-full object-cover sm:h-72" />
+            <div className="space-y-5 p-6 sm:p-9">
+              <div className="flex flex-wrap items-center gap-3 text-[10px] font-black uppercase tracking-widest text-sky-200"><span>{activePost.category}</span><span className="text-slate-600">•</span><span>{activePost.date}</span><span className="text-slate-600">•</span><span>By {activePost.author}</span></div>
+              <h3 className="text-3xl font-black tracking-tight text-white sm:text-4xl">{activePost.title}</h3>
+              <p className="text-sm leading-7 text-slate-300">{activePost.excerpt}</p>
+              <div className="whitespace-pre-wrap text-sm leading-7 text-slate-400">{activePost.content}</div>
+              <button type="button" onClick={() => setActivePost(null)} className="rounded-xl border border-white/10 px-5 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-white/5">Close article</button>
+            </div>
+          </article>
+        </div>
+      )}
       {filteredPosts.length === 0 && (
         <div className="py-32 text-center glass-panel rounded-[3rem] border-dashed border-white/10">
           <div className="bg-white/5 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
