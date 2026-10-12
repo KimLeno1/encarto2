@@ -286,9 +286,22 @@ const App: React.FC = () => {
       balance: prev.balance - item.price,
       ownedItems: [...prev.ownedItems, item.id]
     }));
+    // Theme ownership is separate from applying the palette. Newly acquired themes equip immediately.
+    if (item.type === 'theme' && item.themeKey) setTheme(item.themeKey);
     // Role-related products are cosmetic or application passes only. Privileged roles
     // must be granted by the server/admin workflow, never by a client-side purchase.
     alert(`Successfully acquired ${item.name}!`);
+  };
+
+  const handleEquipTheme = (item: ShopItem) => {
+    if (item.type !== 'theme' || !item.themeKey || !profile.ownedItems.includes(item.id)) return;
+    setTheme(item.themeKey);
+    setEditFields(prev => ({ ...prev, selectedTheme: item.themeKey! }));
+    if (profile.id) {
+      api.updateProfile(profile.id, { selectedTheme: item.themeKey }).catch(err => {
+        console.error('Failed to save selected theme:', err);
+      });
+    }
   };
 
   const handleRegisterTournament = (tournament: Tournament) => {
@@ -560,7 +573,7 @@ const App: React.FC = () => {
         )}
         {activePanel === PanelType.STORE && (
           loadingPanels[PanelType.STORE] ? <SectionLoader message="Opening Armory Vault..." /> : 
-          <StorePanel items={SHOP_ITEMS} profile={profile} onPurchase={handlePurchase} />
+          <StorePanel items={SHOP_ITEMS} profile={profile} onPurchase={handlePurchase} onEquip={handleEquipTheme} />
         )}
         {activePanel === PanelType.HALL_OF_FAME && (
           loadingPanels[PanelType.HALL_OF_FAME] ? <SectionLoader message="Recalling Legends..." /> : 
