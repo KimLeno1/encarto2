@@ -50,4 +50,22 @@ describe('Encarto API Endpoints', () => {
     expect(res.status).toBe(401);
     expect(res.body.error).toBeDefined();
   });
+  it('does not grant CORS permission to an unconfigured origin', async () => {
+    const res = await request(app)
+      .get('/api/health')
+      .set('Origin', 'https://attacker.example');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('blocks state-changing requests from an untrusted browser origin', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout')
+      .set('Origin', 'https://attacker.example');
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('Untrusted request origin.');
+  });
+
 });

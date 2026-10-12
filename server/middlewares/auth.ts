@@ -64,19 +64,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     });
 
     if (!user) {
-      // Fallback for test/standalone environments where seed user is in session token
-      req.user = {
-        id: session.userId,
-        username: session.username || 'TestUser',
-        email: 'user@encarto.io',
-        role: session.role || 'USER',
-        rank: 1,
-        exp: 0,
-        balance: 100,
-        avatarUrl: null,
-        bio: null,
-      };
-      next();
+      res.status(401).json({ error: 'Invalid or expired session. Please log in again.' });
       return;
     }
 
@@ -85,20 +73,11 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       balance: Number(user.balance),
     };
     next();
-  } catch (error) {
-    // Graceful fallback for environments without active DATABASE_URL
-    req.user = {
-      id: session.userId,
-      username: session.username || 'TestUser',
-      email: 'user@encarto.io',
-      role: session.role || 'USER',
-      rank: 1,
-      exp: 0,
-      balance: 100,
-      avatarUrl: null,
-      bio: null,
-    };
-    next();
+  } catch {
+    // Never authenticate from token claims when the authoritative account lookup fails.
+    // A database outage is an availability failure, not permission to grant access.
+    res.status(503).json({ error: 'Authentication service temporarily unavailable.' });
+    return;
   }
 }
 

@@ -1,0 +1,45 @@
+name: Encarto Security Checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - "security/**"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Reconcile the existing lockfile and install dependencies
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --no-audit --no-fund
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run regression tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/encarto_test?connect_timeout=2
+        run: npm test
+
+      - name: Type-check
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build

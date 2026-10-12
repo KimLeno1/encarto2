@@ -72,10 +72,10 @@ let socketInstance: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socketInstance) {
-    const token = localStorage.getItem('encarto_token') || undefined;
+    // Session authentication uses the HttpOnly encarto_session cookie.
+    // Never read a bearer session token from localStorage.
     socketInstance = io(window.location.origin, {
       withCredentials: true,
-      auth: { token },
       autoConnect: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,

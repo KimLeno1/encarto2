@@ -17,13 +17,40 @@ app.use(
   })
 );
 
-// CORS
+// CORS: allow only explicitly configured browser origins. Requests without an Origin
+// (for example, server-to-server health checks) are not browser CORS requests.
+const allowedOrigins = new Set(
+  env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+);
 app.use(
   cors({
-    origin: true,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
   })
 );
+
+ // CORS headers alone do not prevent a cross-origin request from reaching a state-changing
+ // endpoint. Enforce the Origin allowlist for browser mutation requests as a CSRF defense.
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    next();
+    return;
+  }
+
+  const origin = req.get('Origin');
+  if (origin && !allowedOrigins.has(origin)) {
+    res.status(403).json({ error: 'Untrusted request origin.' });
+    return;
+  }
+
+  next();
+});
 
 // Request parsing & limits
 app.use(express.json({ limit: '5mb' }));
