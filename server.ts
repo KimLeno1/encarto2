@@ -1,8 +1,8 @@
 import http from 'http';
-import { app } from './server/app.ts';
-import { env } from './server/config/env.ts';
-import { prisma } from './server/db/client.ts';
-import { setupSocketIO } from './server/socket/index.ts';
+import { app } from './server/app.js';
+import { env } from './server/config/env.js';
+import { prisma } from './server/db/client.js';
+import { setupSocketIO } from './server/socket/index.js';
 import { createServer as createViteServer } from 'vite';
 
 async function bootstrap() {
