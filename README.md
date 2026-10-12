@@ -23,24 +23,24 @@ Copy `.env.example` to `.env` and configure your database URL:
 cp .env.example .env
 ```
 
-Example `.env`:
+Example development configuration (replace the placeholders before provisioning an admin):
 ```env
 PORT=3000
 NODE_ENV=development
 APP_URL=http://localhost:3000
-
-# PostgreSQL Connection String (e.g. Neon Postgres)
-DATABASE_URL=postgresql://user:password@ep-sample.region.neon.tech/encarto_db?sslmode=require
-
-# Session & Security
-SESSION_SECRET=encarto-super-secret-session-key-change-in-production-min32chars
-CORS_ORIGIN=http://localhost:3000
-
-# Initial Admin Provisioning
-ADMIN_USERNAME=encartomaster
-ADMIN_EMAIL=admin@encarto.gg
-ADMIN_PASSWORD=EncartoAdmin2026!
+DATABASE_URL=postgresql://user:password@localhost:5432/encarto_db?schema=public
+SESSION_SECRET=replace-with-random-32-plus-character-secret
+CORS_ORIGIN=http://localhost:3000,http://localhost:5173
+ADMIN_USERNAME=replace-with-admin-username
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=replace-with-unique-password-at-least-16-chars
 ```
+
+Never commit `.env` or production credentials. Production requires explicit, unique values; placeholder/default session secrets and admin passwords are rejected. Admin provisioning creates a new account only and refuses to promote or overwrite an existing account.
+
+### Deployment architecture warning
+
+This repository's build script runs `vite build`, while `server.ts` starts a persistent Express + Socket.IO HTTP server. The repository currently has no Vercel function entrypoint or `vercel.json` routing configuration. A standard Vercel static/Vite deployment does **not** automatically start `server.ts`; API and Socket.IO functionality therefore needs explicit deployment verification. Use a persistent Node.js host for the Express/Socket.IO server, or design and test a compatible deployment architecture before relying on these endpoints in production.
 
 ### Installation & Database Migration
 1. Install dependencies:
