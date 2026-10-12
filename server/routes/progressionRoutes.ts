@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { ProgressionController } from '../controllers/progressionController.ts';
-import { authenticate } from '../middlewares/auth.ts';
+import { ProgressionController } from '../controllers/progressionController.js';
+import { authenticate } from '../middlewares/auth.js';
 
 export const progressionRouter = Router();
 
