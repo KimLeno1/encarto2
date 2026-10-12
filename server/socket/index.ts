@@ -24,6 +24,15 @@ export function setupSocketIO(httpServer: HttpServer): SocketIOServer {
       },
       credentials: true,
     },
+    // CORS middleware does not protect the WebSocket upgrade itself; enforce Origin here too.
+    allowRequest: (req, callback) => {
+      const origin = req.headers.origin;
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback('Untrusted WebSocket origin', false);
+    },
     transports: ['websocket', 'polling'],
   });
 
