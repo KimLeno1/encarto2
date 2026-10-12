@@ -20,11 +20,11 @@ if (isProduction) {
   }
 
   const sessionSecret = process.env.SESSION_SECRET || '';
-  if (sessionSecret.length < 32 || sessionSecret === 'encarto-super-secret-session-key-change-in-production-min32chars') {
+  if (sessionSecret.length < 32 || sessionSecret === 'encarto-super-secret-session-key-change-in-production-min32chars' || sessionSecret.startsWith('replace-with-')) {
     throw new Error('SESSION_SECRET must be a unique, randomly generated value of at least 32 characters in production.');
   }
 
-  if (process.env.ADMIN_PASSWORD === 'EncartoAdmin2026!') {
+  if (process.env.ADMIN_PASSWORD === 'EncartoAdmin2026!' || process.env.ADMIN_PASSWORD?.startsWith('replace-with-')) {
     throw new Error('ADMIN_PASSWORD must not use the example/default password in production.');
   }
 }
