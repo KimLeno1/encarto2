@@ -10,6 +10,7 @@ interface StorePanelProps {
   items: ShopItem[];
   profile: PlayerProfile;
   onPurchase: (item: ShopItem) => void;
+  onEquip: (item: ShopItem) => void;
 }
 
 const CATEGORIES = [
@@ -31,7 +32,7 @@ const TYPE_META: Record<ShopItem['type'], { label: string; icon: React.ReactNode
   merch: { label: 'Merch', icon: <Shirt size={23} />, tone: 'text-emerald-200 bg-emerald-300/10 border-emerald-300/20' },
 };
 
-const StorePanel: React.FC<StorePanelProps> = ({ items, profile, onPurchase }) => {
+const StorePanel: React.FC<StorePanelProps> = ({ items, profile, onPurchase, onEquip }) => {
   const [category, setCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [ownership, setOwnership] = useState<'available' | 'all' | 'owned'>('available');
@@ -149,7 +150,7 @@ const StorePanel: React.FC<StorePanelProps> = ({ items, profile, onPurchase }) =
                     </div>
                     <div className="mt-auto flex items-end justify-between gap-3 border-t border-white/[.06] pt-4">
                       <div><p className="text-[9px] font-bold uppercase tracking-widest text-slate-600">Price</p><p className="mt-1 text-lg font-black text-white">{item.price.toLocaleString()} <span className="text-[10px] text-sky-200">M3GA</span></p></div>
-                      {isOwned ? <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-200"><Check size={14} /> Acquired</span> :
+                      {isOwned ? (item.type === 'theme' ? <button onClick={() => onEquip(item)} className="inline-flex items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-300/10 px-3.5 py-2.5 text-xs font-extrabold text-sky-100 hover:bg-sky-300/20">Equip theme <ArrowUpRight size={14} /></button> : <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-200"><Check size={14} /> Acquired</span>) :
                         <button disabled={disabled} onClick={() => onPurchase(item)} className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-extrabold transition ${disabled ? 'cursor-not-allowed border border-white/[.06] bg-white/[.025] text-slate-600' : 'bg-gradient-to-r from-violet-600 to-blue-600 text-white shadow-lg shadow-violet-950/30 hover:brightness-110'}`}>
                           {access.unlocked && !canAfford ? 'Insufficient funds' : 'Acquire'} {!disabled && <ArrowUpRight size={14} />}
                         </button>}
