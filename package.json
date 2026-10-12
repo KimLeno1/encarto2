@@ -1,8 +1,9 @@
 {
   "name": "encarto-gaming-hub",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "desktop/main.cjs",
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node server.ts",
@@ -46,5 +47,49 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vitest": "^5.0.3"
+  },
+  "build": {
+    "appId": "com.encarto.desktop",
+    "productName": "Encarto",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "desktop/**/*",
+      "package.json"
+    ],
+    "artifactName": "Encarto-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.games"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "linux": {
+      "target": [
+        "deb"
+      ],
+      "category": "Game",
+      "maintainer": "Encarto"
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnss3",
+        "libxss1",
+        "libasound2"
+      ]
+    }
   }
 }
