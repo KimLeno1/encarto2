@@ -10,22 +10,21 @@ interface FixturesPanelProps {
 
 const FixturesPanel: React.FC<FixturesPanelProps> = ({ fixtures, profile }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | Fixture['status']>('all');
 
   const sortedFixtures = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
     return [...fixtures]
-      .filter(f => f.tournamentName.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter(f => !query || `${f.tournamentName} ${f.teamA} ${f.teamB} ${f.game}`.toLowerCase().includes(query))
+      .filter(f => statusFilter === 'all' || f.status === statusFilter)
       .sort((a, b) => {
         const aIsMyMatch = a.participants.includes(profile.name);
         const bIsMyMatch = b.participants.includes(profile.name);
-        
-        // Matches involving user go to the top
-        if (aIsMyMatch && !bIsMyMatch) return -1;
-        if (!aIsMyMatch && bIsMyMatch) return 1;
-        
-        // Otherwise keep original ordering or by date (can add more complex date sorting if needed)
-        return 0;
+        if (aIsMyMatch !== bIsMyMatch) return aIsMyMatch ? -1 : 1;
+        const dateOrder = a.date.localeCompare(b.date);
+        return dateOrder || a.time.localeCompare(b.time);
       });
-  }, [fixtures, searchQuery, profile.name]);
+  }, [fixtures, searchQuery, statusFilter, profile.name]);
 
   const myMatches = sortedFixtures.filter(f => f.participants.includes(profile.name));
   const otherMatches = sortedFixtures.filter(f => !f.participants.includes(profile.name));
@@ -119,6 +118,14 @@ const FixturesPanel: React.FC<FixturesPanelProps> = ({ fixtures, profile }) => {
           />
         </div>
       </header>
+      <div className="flex flex-wrap items-center gap-2">
+        {(['all', 'scheduled', 'live', 'finished'] as const).map(status => (
+          <button key={status} type="button" onClick={() => setStatusFilter(status)} aria-pressed={statusFilter === status} className={`rounded-xl border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition ${statusFilter === status ? 'border-primary/50 bg-primary/15 text-primary' : 'border-white/10 bg-white/[.025] text-gray-500 hover:text-white'}`}>
+            {status === 'all' ? 'All fixtures' : status}
+          </button>
+        ))}
+        <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-gray-600">{sortedFixtures.length} match{sortedFixtures.length === 1 ? '' : 'es'} found</span>
+      </div>
 
       {/* Hero Section for User Matches */}
       {myMatches.length > 0 && (
