@@ -20,12 +20,15 @@ jobs:
         include:
           - name: Windows
             os: windows-latest
+            platform: win
             target: nsis
           - name: macOS
             os: macos-latest
+            platform: mac
             target: dmg
           - name: Debian Linux
             os: ubuntu-latest
+            platform: linux
             target: deb
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -37,8 +40,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      - name: Install dependencies (including platform-specific optional packages)
+        run: npm install --include=optional --no-audit --no-fund
+      - name: Verify native Rollup package
+        run: npm ls rollup
       - name: Generate Prisma client
         run: npx prisma generate
       - name: Run tests
@@ -51,9 +56,9 @@ jobs:
       - name: Build web frontend
         run: npm run build
       - name: Install desktop packager
-        run: npm install --no-save electron electron-builder --no-audit --no-fund
+        run: npm install --no-save --include=optional electron electron-builder --no-audit --no-fund
       - name: Package installer
-        run: npx electron-builder --${{ matrix.target }} --publish never
+        run: npx electron-builder --${{ matrix.platform }} ${{ matrix.target }} --publish never
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
