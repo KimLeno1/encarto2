@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifySessionToken } from '../utils/session.ts';
-import { prisma } from '../db/client.ts';
+import { verifySessionToken } from '../utils/session.js';
+import { prisma } from '../db/client.js';
 
 export interface AuthenticatedUser {
   id: string;
