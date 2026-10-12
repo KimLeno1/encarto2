@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
-import { Search, ArrowDownUp } from 'lucide-react';
-import { Trophy, Star, Crown, Medal } from 'lucide-react';
+import { Search, ArrowDownUp, Trophy, Star, Crown, Medal } from 'lucide-react';
 import { HallOfFameEntry } from './types';
 import { MOCK_HALL_OF_FAME } from './mockData';
 
@@ -31,7 +30,7 @@ const HallOfFamePanel: React.FC = () => {
             <Crown size={48} className="text-yellow-500" />
           </div>
           <h2 className="anime-title text-7xl md:text-8xl text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(250,204,21,0.4)]">
-            Hall of Souls
+            Hall of Fame
           </h2>
           <p className="text-gray-400 text-xs font-black uppercase tracking-[0.5em]">Where Legends Are Written in Neon</p>
         </header>
