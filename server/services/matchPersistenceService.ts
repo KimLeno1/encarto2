@@ -1,6 +1,6 @@
-import { prisma } from '../db/client.ts';
-import { logAuditEvent } from '../utils/audit.ts';
-import { ProgressionService, AwardResultForUser } from './progressionService.ts';
+import { prisma } from '../db/client.js';
+import { logAuditEvent } from '../utils/audit.js';
+import { ProgressionService, AwardResultForUser } from './progressionService.js';
 
 export interface MatchInitParams {
   id: string;
