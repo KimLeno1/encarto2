@@ -154,7 +154,7 @@ export const PanelType = {
 
 export type PanelType = typeof PanelType[keyof typeof PanelType];
 
-export type AnimeTheme = 'mha' | 'onepiece' | 'naruto';
+export type AnimeTheme = 'mha' | 'onepiece' | 'naruto' | 'violet-rift' | 'cyberwave' | 'arctic-pulse' | 'emberstorm' | 'sakura-bloom';
 
 export interface ShopItem {
   id: string;
@@ -168,6 +168,7 @@ export interface ShopItem {
     roles?: Array<'USER' | 'MODERATOR' | 'ORGANIZER' | 'ADMIN'>;
   };
   description?: string;
+  themeKey?: AnimeTheme;
 }
 
 export interface ArticleData {
