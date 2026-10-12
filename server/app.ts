@@ -35,6 +35,23 @@ app.use(
   })
 );
 
+ // CORS headers alone do not prevent a cross-origin request from reaching a state-changing
+ // endpoint. Enforce the Origin allowlist for browser mutation requests as a CSRF defense.
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    next();
+    return;
+  }
+
+  const origin = req.get('Origin');
+  if (origin && !allowedOrigins.has(origin)) {
+    res.status(403).json({ error: 'Untrusted request origin.' });
+    return;
+  }
+
+  next();
+});
+
 // Request parsing & limits
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
