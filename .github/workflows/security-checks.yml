@@ -1,11 +1,12 @@
-name: Encarto Security Checks
+name: Encarto Verification
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'security/**']
   push:
     branches:
       - "security/**"
+      - "ui/**"
 
 permissions:
   contents: read
