@@ -1,19 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
-import { prisma } from '../db/client.ts';
+import { prisma } from '../db/client.js';
 import {
   registerSchema,
   loginSchema,
   updateProfileSchema,
-} from '../validators/auth.ts';
+} from '../validators/auth.js';
 import {
   createSessionToken,
   invalidateSessionToken,
   invalidateAllUserSessions,
   extractSessionToken,
-} from '../utils/session.ts';
-import { logAuditEvent } from '../utils/audit.ts';
-import { env } from '../config/env.ts';
+} from '../utils/session.js';
+import { logAuditEvent } from '../utils/audit.js';
+import { env } from '../config/env.js';
 
 const BCRYPT_ROUNDS = 12;
 
