@@ -1,10 +1,10 @@
-import { prisma } from '../db/client.ts';
-import { logAuditEvent } from '../utils/audit.ts';
+import { prisma } from '../db/client.js';
+import { logAuditEvent } from '../utils/audit.js';
 import {
   PROGRESSION_CONFIG,
   calculateLevelFromExp,
   RankTier,
-} from '../config/progressionConfig.ts';
+} from '../config/progressionConfig.js';
 
 export type MatchOutcome = 'VICTORY' | 'DEFEAT' | 'DRAW' | 'FORFEIT';
 export type MatchEndReason = 'ELIMINATION' | 'TIMEOUT' | 'FORFEIT' | 'DRAW';
