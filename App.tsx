@@ -251,6 +251,32 @@ const App: React.FC = () => {
   };
 
   const handlePurchase = (item: ShopItem) => {
+    const requirements = item.requirements;
+    const role = profile.role || 'USER';
+    const birthDate = profile.birthday ? new Date(profile.birthday) : null;
+    let age = 0;
+    if (birthDate && !Number.isNaN(birthDate.getTime())) {
+      const today = new Date();
+      age = today.getFullYear() - birthDate.getFullYear();
+      if (today.getMonth() < birthDate.getMonth() ||
+        (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) age--;
+    }
+    if (profile.ownedItems.includes(item.id)) {
+      alert('You already own this item.');
+      return;
+    }
+    if (requirements?.minRank && profile.rank < requirements.minRank) {
+      alert(`Reach Rank ${requirements.minRank} to unlock this item.`);
+      return;
+    }
+    if (requirements?.minAge && age < requirements.minAge) {
+      alert(`This item requires you to be ${requirements.minAge} or older.`);
+      return;
+    }
+    if (requirements?.roles?.length && !requirements.roles.includes(role)) {
+      alert(`This item requires one of these roles: ${requirements.roles.join(', ')}.`);
+      return;
+    }
     if (profile.balance < item.price) {
       alert("Insufficient M3GA coins!");
       return;
@@ -260,6 +286,8 @@ const App: React.FC = () => {
       balance: prev.balance - item.price,
       ownedItems: [...prev.ownedItems, item.id]
     }));
+    // Role-related products are cosmetic or application passes only. Privileged roles
+    // must be granted by the server/admin workflow, never by a client-side purchase.
     alert(`Successfully acquired ${item.name}!`);
   };
 
