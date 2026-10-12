@@ -89,8 +89,8 @@ body {
   color: var(--text);
   font-family: 'Outfit', 'Inter', system-ui, sans-serif;
   background:
-    radial-gradient(ellipse at 12% 0%, rgba(109, 40, 217, 0.13), transparent 35rem),
-    radial-gradient(ellipse at 88% 12%, rgba(14, 165, 233, 0.09), transparent 32rem),
+    radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 35rem),
+    radial-gradient(ellipse at 88% 12%, color-mix(in srgb, var(--secondary) 11%, transparent), transparent 32rem),
     var(--bg);
   background-attachment: fixed;
   -webkit-tap-highlight-color: transparent;
@@ -103,8 +103,8 @@ body::before {
   pointer-events: none;
   z-index: -1;
   opacity: 0.18;
-  background-image: linear-gradient(rgba(139, 92, 246, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139, 92, 246, 0.055) 1px, transparent 1px);
+  background-image: linear-gradient(color-mix(in srgb, var(--primary) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 7%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: linear-gradient(to bottom, black, transparent 82%);
 }
@@ -158,11 +158,11 @@ select:focus-visible {
 }
 
 .text-primary {
-  color: #a78bfa;
+  color: var(--accent);
 }
 
 .border-primary {
-  border-color: #8b5cf6;
+  border-color: var(--primary);
 }
 
 .shadow-primary\/40 {
