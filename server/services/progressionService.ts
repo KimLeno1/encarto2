@@ -385,7 +385,7 @@ export class ProgressionService {
       progressPercent: levelInfo.progressPercent,
       stats,
       recentHistory: history.slice(0, 20),
-      recentTransactions,
+      recentTransactions: transactions,
     };
   }
 
