@@ -91,9 +91,9 @@ const BlogPanel: React.FC<BlogPanelProps> = ({ posts }) => {
                     <span className="text-[8px] font-black text-gray-600 uppercase">Senior Analyst</span>
                   </div>
                 </div>
-                <button className="p-4 bg-primary text-white rounded-full shadow-xl shadow-primary/20 hover:scale-110 transition-all">
+                <span className="p-4 bg-primary text-white rounded-full shadow-xl shadow-primary/20">
                   <ChevronRight size={24} />
-                </button>
+                </span>
               </div>
             </div>
           </div>
@@ -129,7 +129,7 @@ const BlogPanel: React.FC<BlogPanelProps> = ({ posts }) => {
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         ))}
 
         {/* Dynamic Ad Placement within Grid */}
