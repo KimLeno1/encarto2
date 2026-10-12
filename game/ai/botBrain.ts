@@ -1,7 +1,7 @@
 import {
   BotDifficultyConfig,
   BotAIState,
-} from './botConfig.ts';
+} from './botConfig.js';
 
 export interface EntityPosition {
   x: number;
