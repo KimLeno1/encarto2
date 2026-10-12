@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { ProgressionService } from '../services/progressionService.ts';
+import { ProgressionService } from '../services/progressionService.js';
 
 const completeBotMatchSchema = z.object({
   matchId: z.string().min(3).max(100),
