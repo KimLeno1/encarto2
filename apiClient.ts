@@ -2,7 +2,6 @@ export const API_BASE_URL = '/api';
 
 export interface AuthResponse {
   message?: string;
-  token?: string;
   user?: any;
   error?: string;
   details?: Array<{ field: string; message: string }>;
