@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { env } from '../config/env.ts';
+import { env } from '../config/env.js';
 
 export interface SessionData {
   userId: string;
