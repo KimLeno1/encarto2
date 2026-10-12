@@ -68,7 +68,7 @@ const BlogPanel: React.FC<BlogPanelProps> = ({ posts }) => {
 
       {/* Featured Post */}
       {!searchQuery && featuredPost && (
-        <section onClick={() => setActivePost(featuredPost)} className="glass-panel rounded-[3.5rem] overflow-hidden border border-white/10 shadow-2xl relative group cursor-pointer hover:border-primary/40 transition-all duration-500">
+        <section onClick={() => { if (featuredPost) setActivePost(featuredPost); }} className="glass-panel rounded-[3.5rem] overflow-hidden border border-white/10 shadow-2xl relative group cursor-pointer hover:border-primary/40 transition-all duration-500">
           <div className="grid lg:grid-cols-2">
             <div className="h-80 lg:h-auto relative overflow-hidden">
               <img src={featuredPost.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2000ms]" alt="Featured" />
