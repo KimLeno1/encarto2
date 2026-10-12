@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { verifySessionToken } from '../utils/session.ts';
+import { env } from '../config/env.ts';
 import { matchmakingService, MatchSession } from '../services/matchmakingService.ts';
 import { ArenaAuthoritativeSession } from '../game/arenaAuthoritativeSession.ts';
 import { playerInputSchema, attackInputSchema } from '../validators/matchmaking.ts';
@@ -9,9 +10,18 @@ import { playerInputSchema, attackInputSchema } from '../validators/matchmaking.
 export const activeGameSessions = new Map<string, ArenaAuthoritativeSession>();
 
 export function setupSocketIO(httpServer: HttpServer): SocketIOServer {
+  const allowedOrigins = new Set(
+    env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+  );
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: true,
+      origin(origin, callback) {
+        if (!origin || allowedOrigins.has(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(null, false);
+      },
       credentials: true,
     },
     transports: ['websocket', 'polling'],
