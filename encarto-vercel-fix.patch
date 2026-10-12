@@ -1,0 +1,326 @@
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/api/[...path].ts b/api/[...path].ts
+--- a/api/[...path].ts	2026-10-12 05:03:45.548246441 +0000
++++ b/api/[...path].ts	2026-10-12 05:03:45.558376161 +0000
+@@ -5,7 +5,7 @@
+  * routers at /api/auth, /api/admin, /api/progression, and /api/matchmaking.
+  * Do not start an HTTP listener or attach Socket.IO in a serverless function.
+  */
+-import { app } from '../server/app.ts';
++import { app } from '../server/app.js';
+ 
+ export default app;
+ 
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/game/ai/botBrain.ts b/game/ai/botBrain.ts
+--- a/game/ai/botBrain.ts	2026-10-12 05:03:45.549364611 +0000
++++ b/game/ai/botBrain.ts	2026-10-12 05:03:45.593156814 +0000
+@@ -1,7 +1,7 @@
+ import {
+   BotDifficultyConfig,
+   BotAIState,
+-} from './botConfig.ts';
++} from './botConfig.js';
+ 
+ export interface EntityPosition {
+   x: number;
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/package.json b/package.json
+--- a/package.json	2026-10-12 05:03:45.551522055 +0000
++++ b/package.json	2026-10-12 05:04:10.893331817 +0000
+@@ -5,7 +5,7 @@
+   "type": "module",
+   "scripts": {
+     "dev": "tsx server.ts",
+-    "start": "node server.ts",
++    "start": "tsx server.ts",
+     "build": "vite build",
+     "preview": "vite preview",
+     "test": "vitest run",
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/scripts/seedAdmin.ts b/scripts/seedAdmin.ts
+--- a/scripts/seedAdmin.ts	2026-10-12 05:03:45.551779407 +0000
++++ b/scripts/seedAdmin.ts	2026-10-12 05:03:45.591527870 +0000
+@@ -1,6 +1,6 @@
+ import bcrypt from 'bcryptjs';
+-import { prisma } from '../server/db/client.ts';
+-import { env } from '../server/config/env.ts';
++import { prisma } from '../server/db/client.js';
++import { env } from '../server/config/env.js';
+ 
+ async function seedAdmin(): Promise<void> {
+   // Configuration is validated at startup. Never fall back to a public/default password.
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/app.ts b/server/app.ts
+--- a/server/app.ts	2026-10-12 05:03:45.551855409 +0000
++++ b/server/app.ts	2026-10-12 05:03:45.577485998 +0000
+@@ -3,10 +3,10 @@
+ import cors from 'cors';
+ import cookieParser from 'cookie-parser';
+ import morgan from 'morgan';
+-import { env } from './config/env.ts';
+-import { checkDatabaseConnection, prisma } from './db/client.ts';
+-import { authRouter } from './routes/authRoutes.ts';
+-import { errorHandler } from './middlewares/errorHandler.ts';
++import { env } from './config/env.js';
++import { checkDatabaseConnection, prisma } from './db/client.js';
++import { authRouter } from './routes/authRoutes.js';
++import { errorHandler } from './middlewares/errorHandler.js';
+ 
+ export const app = express();
+ 
+@@ -96,15 +96,15 @@
+ app.use('/api/auth', authRouter);
+ 
+ // Matchmaking and Matches API
+-import { matchmakingRouter } from './routes/matchmakingRoutes.ts';
++import { matchmakingRouter } from './routes/matchmakingRoutes.js';
+ app.use('/api/matchmaking', matchmakingRouter);
+ 
+ // Progression, Rank Tiers, and Match History API
+-import { progressionRouter } from './routes/progressionRoutes.ts';
++import { progressionRouter } from './routes/progressionRoutes.js';
+ app.use('/api/progression', progressionRouter);
+ 
+ // Admin Control Panel API
+-import { adminRouter } from './routes/adminRoutes.ts';
++import { adminRouter } from './routes/adminRoutes.js';
+ app.use('/api/admin', adminRouter);
+ 
+ // Centralized error handler
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/controllers/adminController.ts b/server/controllers/adminController.ts
+--- a/server/controllers/adminController.ts	2026-10-12 05:03:45.552021966 +0000
++++ b/server/controllers/adminController.ts	2026-10-12 05:03:45.563549911 +0000
+@@ -1,9 +1,9 @@
+ import { Request, Response, NextFunction } from 'express';
+ import { z } from 'zod';
+-import { prisma } from '../db/client.ts';
+-import { logAuditEvent } from '../utils/audit.ts';
+-import { checkDatabaseConnection } from '../db/client.ts';
+-import { PROGRESSION_CONFIG } from '../config/progressionConfig.ts';
++import { prisma } from '../db/client.js';
++import { logAuditEvent } from '../utils/audit.js';
++import { checkDatabaseConnection } from '../db/client.js';
++import { PROGRESSION_CONFIG } from '../config/progressionConfig.js';
+ 
+ // In-memory runtime configuration store for dynamic admin adjustments
+ export const runtimeAdminConfig = {
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/controllers/authController.ts b/server/controllers/authController.ts
+--- a/server/controllers/authController.ts	2026-10-12 05:03:45.552149761 +0000
++++ b/server/controllers/authController.ts	2026-10-12 05:03:45.561693078 +0000
+@@ -1,19 +1,19 @@
+ import { Request, Response, NextFunction } from 'express';
+ import bcrypt from 'bcryptjs';
+-import { prisma } from '../db/client.ts';
++import { prisma } from '../db/client.js';
+ import {
+   registerSchema,
+   loginSchema,
+   updateProfileSchema,
+-} from '../validators/auth.ts';
++} from '../validators/auth.js';
+ import {
+   createSessionToken,
+   invalidateSessionToken,
+   invalidateAllUserSessions,
+   extractSessionToken,
+-} from '../utils/session.ts';
+-import { logAuditEvent } from '../utils/audit.ts';
+-import { env } from '../config/env.ts';
++} from '../utils/session.js';
++import { logAuditEvent } from '../utils/audit.js';
++import { env } from '../config/env.js';
+ 
+ const BCRYPT_ROUNDS = 12;
+ 
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/controllers/matchmakingController.ts b/server/controllers/matchmakingController.ts
+--- a/server/controllers/matchmakingController.ts	2026-10-12 05:03:45.552281792 +0000
++++ b/server/controllers/matchmakingController.ts	2026-10-12 05:03:45.560144588 +0000
+@@ -1,7 +1,7 @@
+ import { Request, Response, NextFunction } from 'express';
+-import { matchmakingService } from '../services/matchmakingService.ts';
+-import { MatchPersistenceService } from '../services/matchPersistenceService.ts';
+-import { queueRequestSchema } from '../validators/matchmaking.ts';
++import { matchmakingService } from '../services/matchmakingService.js';
++import { MatchPersistenceService } from '../services/matchPersistenceService.js';
++import { queueRequestSchema } from '../validators/matchmaking.js';
+ 
+ export class MatchmakingController {
+   static async getQueueStatus(req: Request, res: Response): Promise<void> {
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/controllers/progressionController.ts b/server/controllers/progressionController.ts
+--- a/server/controllers/progressionController.ts	2026-10-12 05:03:45.552307622 +0000
++++ b/server/controllers/progressionController.ts	2026-10-12 05:03:45.565135328 +0000
+@@ -1,6 +1,6 @@
+ import { Request, Response, NextFunction } from 'express';
+ import { z } from 'zod';
+-import { ProgressionService } from '../services/progressionService.ts';
++import { ProgressionService } from '../services/progressionService.js';
+ 
+ const completeBotMatchSchema = z.object({
+   matchId: z.string().min(3).max(100),
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/game/arenaAuthoritativeSession.ts b/server/game/arenaAuthoritativeSession.ts
+--- a/server/game/arenaAuthoritativeSession.ts	2026-10-12 05:03:45.552419957 +0000
++++ b/server/game/arenaAuthoritativeSession.ts	2026-10-12 05:03:45.573696056 +0000
+@@ -1,8 +1,8 @@
+ import { Server, Socket } from 'socket.io';
+-import { MatchSession } from '../services/matchmakingService.ts';
+-import { MatchPersistenceService } from '../services/matchPersistenceService.ts';
+-import { BotBrain } from '../../game/ai/botBrain.ts';
+-import { BOT_DIFFICULTY_PRESETS } from '../../game/ai/botConfig.ts';
++import { MatchSession } from '../services/matchmakingService.js';
++import { MatchPersistenceService } from '../services/matchPersistenceService.js';
++import { BotBrain } from '../../game/ai/botBrain.js';
++import { BOT_DIFFICULTY_PRESETS } from '../../game/ai/botConfig.js';
+ 
+ export interface AuthoritativePlayerState {
+   id: string;
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/middlewares/auth.ts b/server/middlewares/auth.ts
+--- a/server/middlewares/auth.ts	2026-10-12 05:03:45.552533125 +0000
++++ b/server/middlewares/auth.ts	2026-10-12 05:03:45.566618813 +0000
+@@ -1,6 +1,6 @@
+ import { Request, Response, NextFunction } from 'express';
+-import { verifySessionToken } from '../utils/session.ts';
+-import { prisma } from '../db/client.ts';
++import { verifySessionToken } from '../utils/session.js';
++import { prisma } from '../db/client.js';
+ 
+ export interface AuthenticatedUser {
+   id: string;
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/routes/adminRoutes.ts b/server/routes/adminRoutes.ts
+--- a/server/routes/adminRoutes.ts	2026-10-12 05:03:45.552599120 +0000
++++ b/server/routes/adminRoutes.ts	2026-10-12 05:03:45.588094204 +0000
+@@ -1,6 +1,6 @@
+ import { Router } from 'express';
+-import { AdminController } from '../controllers/adminController.ts';
+-import { authenticate, requireRole } from '../middlewares/auth.ts';
++import { AdminController } from '../controllers/adminController.js';
++import { authenticate, requireRole } from '../middlewares/auth.js';
+ 
+ export const adminRouter = Router();
+ 
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/routes/authRoutes.ts b/server/routes/authRoutes.ts
+--- a/server/routes/authRoutes.ts	2026-10-12 05:03:45.552625607 +0000
++++ b/server/routes/authRoutes.ts	2026-10-12 05:03:45.582831399 +0000
+@@ -1,7 +1,7 @@
+ import { Router } from 'express';
+ import rateLimit from 'express-rate-limit';
+-import { AuthController } from '../controllers/authController.ts';
+-import { authenticate, requireRole } from '../middlewares/auth.ts';
++import { AuthController } from '../controllers/authController.js';
++import { authenticate, requireRole } from '../middlewares/auth.js';
+ 
+ export const authRouter = Router();
+ 
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/routes/matchmakingRoutes.ts b/server/routes/matchmakingRoutes.ts
+--- a/server/routes/matchmakingRoutes.ts	2026-10-12 05:03:45.552652220 +0000
++++ b/server/routes/matchmakingRoutes.ts	2026-10-12 05:03:45.586333241 +0000
+@@ -1,6 +1,6 @@
+ import { Router } from 'express';
+-import { MatchmakingController } from '../controllers/matchmakingController.ts';
+-import { authenticate } from '../middlewares/auth.ts';
++import { MatchmakingController } from '../controllers/matchmakingController.js';
++import { authenticate } from '../middlewares/auth.js';
+ 
+ export const matchmakingRouter = Router();
+ 
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/routes/progressionRoutes.ts b/server/routes/progressionRoutes.ts
+--- a/server/routes/progressionRoutes.ts	2026-10-12 05:03:45.552677874 +0000
++++ b/server/routes/progressionRoutes.ts	2026-10-12 05:03:45.584677335 +0000
+@@ -1,6 +1,6 @@
+ import { Router } from 'express';
+-import { ProgressionController } from '../controllers/progressionController.ts';
+-import { authenticate } from '../middlewares/auth.ts';
++import { ProgressionController } from '../controllers/progressionController.js';
++import { authenticate } from '../middlewares/auth.js';
+ 
+ export const progressionRouter = Router();
+ 
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/services/matchPersistenceService.ts b/server/services/matchPersistenceService.ts
+--- a/server/services/matchPersistenceService.ts	2026-10-12 05:03:45.552828510 +0000
++++ b/server/services/matchPersistenceService.ts	2026-10-12 05:03:45.568240917 +0000
+@@ -1,6 +1,6 @@
+-import { prisma } from '../db/client.ts';
+-import { logAuditEvent } from '../utils/audit.ts';
+-import { ProgressionService, AwardResultForUser } from './progressionService.ts';
++import { prisma } from '../db/client.js';
++import { logAuditEvent } from '../utils/audit.js';
++import { ProgressionService, AwardResultForUser } from './progressionService.js';
+ 
+ export interface MatchInitParams {
+   id: string;
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/services/matchmakingService.ts b/server/services/matchmakingService.ts
+--- a/server/services/matchmakingService.ts	2026-10-12 05:03:45.552906493 +0000
++++ b/server/services/matchmakingService.ts	2026-10-12 05:03:45.571924156 +0000
+@@ -1,5 +1,5 @@
+ import crypto from 'crypto';
+-import { MatchPersistenceService } from './matchPersistenceService.ts';
++import { MatchPersistenceService } from './matchPersistenceService.js';
+ 
+ export interface QueuedPlayer {
+   userId: string;
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/services/progressionService.ts b/server/services/progressionService.ts
+--- a/server/services/progressionService.ts	2026-10-12 05:03:45.552975300 +0000
++++ b/server/services/progressionService.ts	2026-10-12 05:03:45.569963668 +0000
+@@ -1,10 +1,10 @@
+-import { prisma } from '../db/client.ts';
+-import { logAuditEvent } from '../utils/audit.ts';
++import { prisma } from '../db/client.js';
++import { logAuditEvent } from '../utils/audit.js';
+ import {
+   PROGRESSION_CONFIG,
+   calculateLevelFromExp,
+   RankTier,
+-} from '../config/progressionConfig.ts';
++} from '../config/progressionConfig.js';
+ 
+ export type MatchOutcome = 'VICTORY' | 'DEFEAT' | 'DRAW' | 'FORFEIT';
+ export type MatchEndReason = 'ELIMINATION' | 'TIMEOUT' | 'FORFEIT' | 'DRAW';
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/socket/index.ts b/server/socket/index.ts
+--- a/server/socket/index.ts	2026-10-12 05:03:45.553109696 +0000
++++ b/server/socket/index.ts	2026-10-12 05:03:45.575709398 +0000
+@@ -1,10 +1,10 @@
+ import { Server as SocketIOServer, Socket } from 'socket.io';
+ import { Server as HttpServer } from 'http';
+-import { verifySessionToken } from '../utils/session.ts';
+-import { env } from '../config/env.ts';
+-import { matchmakingService, MatchSession } from '../services/matchmakingService.ts';
+-import { ArenaAuthoritativeSession } from '../game/arenaAuthoritativeSession.ts';
+-import { playerInputSchema, attackInputSchema } from '../validators/matchmaking.ts';
++import { verifySessionToken } from '../utils/session.js';
++import { env } from '../config/env.js';
++import { matchmakingService, MatchSession } from '../services/matchmakingService.js';
++import { ArenaAuthoritativeSession } from '../game/arenaAuthoritativeSession.js';
++import { playerInputSchema, attackInputSchema } from '../validators/matchmaking.js';
+ 
+ // Map of active authoritative sessions: matchId -> ArenaAuthoritativeSession
+ export const activeGameSessions = new Map<string, ArenaAuthoritativeSession>();
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/utils/audit.ts b/server/utils/audit.ts
+--- a/server/utils/audit.ts	2026-10-12 05:03:45.553186035 +0000
++++ b/server/utils/audit.ts	2026-10-12 05:03:45.581012091 +0000
+@@ -1,4 +1,4 @@
+-import { prisma } from '../db/client.ts';
++import { prisma } from '../db/client.js';
+ 
+ export async function logAuditEvent(params: {
+   action: string;
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server/utils/session.ts b/server/utils/session.ts
+--- a/server/utils/session.ts	2026-10-12 05:03:45.553214168 +0000
++++ b/server/utils/session.ts	2026-10-12 05:03:45.579264226 +0000
+@@ -1,5 +1,5 @@
+ import crypto from 'crypto';
+-import { env } from '../config/env.ts';
++import { env } from '../config/env.js';
+ 
+ export interface SessionData {
+   userId: string;
+diff -ruN -x node_modules -x '*.png' -x '*.aseprite' a/server.ts b/server.ts
+--- a/server.ts	2026-10-12 05:03:45.551808215 +0000
++++ b/server.ts	2026-10-12 05:03:45.589711105 +0000
+@@ -1,8 +1,8 @@
+ import http from 'http';
+-import { app } from './server/app.ts';
+-import { env } from './server/config/env.ts';
+-import { prisma } from './server/db/client.ts';
+-import { setupSocketIO } from './server/socket/index.ts';
++import { app } from './server/app.js';
++import { env } from './server/config/env.js';
++import { prisma } from './server/db/client.js';
++import { setupSocketIO } from './server/socket/index.js';
+ import { createServer as createViteServer } from 'vite';
+ 
+ async function bootstrap() {
