@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { MatchmakingController } from '../controllers/matchmakingController.ts';
-import { authenticate } from '../middlewares/auth.ts';
+import { MatchmakingController } from '../controllers/matchmakingController.js';
+import { authenticate } from '../middlewares/auth.js';
 
 export const matchmakingRouter = Router();
 
