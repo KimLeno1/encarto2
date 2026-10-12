@@ -8,7 +8,10 @@ async function seedAdmin(): Promise<void> {
   const email = env.ADMIN_EMAIL.trim().toLowerCase();
   const password = env.ADMIN_PASSWORD;
 
-  if (!username || !email || password.length < 16) {
+  if (!username || !email || password.length < 16 ||
+      username.startsWith('replace-with-') ||
+      email === 'admin@example.com' ||
+      password.startsWith('replace-with-')) {
     throw new Error('Admin provisioning requires ADMIN_USERNAME, ADMIN_EMAIL, and an ADMIN_PASSWORD of at least 16 characters.');
   }
 
