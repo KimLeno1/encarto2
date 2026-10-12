@@ -8,11 +8,17 @@ async function seedAdmin(): Promise<void> {
   const email = env.ADMIN_EMAIL.trim().toLowerCase();
   const password = env.ADMIN_PASSWORD;
 
-  if (!username || !email || password.length < 16 ||
+  if (!process.env.ADMIN_USERNAME?.trim() ||
+      !process.env.ADMIN_EMAIL?.trim() ||
+      !process.env.ADMIN_PASSWORD ||
+      !username ||
+      !email ||
+      password.length < 16 ||
+      password === 'EncartoAdmin2026!' ||
       username.startsWith('replace-with-') ||
       email === 'admin@example.com' ||
       password.startsWith('replace-with-')) {
-    throw new Error('Admin provisioning requires ADMIN_USERNAME, ADMIN_EMAIL, and an ADMIN_PASSWORD of at least 16 characters.');
+    throw new Error('Admin provisioning requires explicitly configured ADMIN_USERNAME, ADMIN_EMAIL, and a unique ADMIN_PASSWORD of at least 16 characters. Default/example values are refused.');
   }
 
   try {
