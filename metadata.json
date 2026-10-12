@@ -1,0 +1,8 @@
+{
+  "name": "Encarto Gaming Hub",
+  "description": "Gamified tournament platform with global rankings, Hall of Fame, and anime-themed interface.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

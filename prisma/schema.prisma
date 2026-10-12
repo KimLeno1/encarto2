@@ -1,0 +1,143 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ORGANIZER
+  ADMIN
+}
+
+enum MatchStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  WAGER_ESCROW
+  WAGER_PAYOUT
+  SHOP_PURCHASE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  email        String        @unique
+  passwordHash String
+  rank         Int           @default(1)
+  exp          Int           @default(0)
+  balance      Decimal       @default(0.00) @db.Decimal(12, 2)
+  avatarUrl    String?
+  bio          String?
+  role         UserRole      @default(USER)
+  isAdmin      Boolean       @default(false)
+  profile      Profile?
+  items        UserItem[]
+  matchesAsA   Match[]       @relation("PlayerAMatches")
+  matchesAsB   Match[]       @relation("PlayerBMatches")
+  wonMatches   Match[]       @relation("WonMatches")
+  transactions Transaction[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([rank])
+  @@index([username])
+}
+
+model Profile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selectedTheme    String   @default("mha")
+  activePlugin     String?
+  activeDecoration String?
+  phone            String?
+  birthday         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Item {
+  id          String     @id
+  name        String
+  description String?
+  price       Decimal    @db.Decimal(10, 2)
+  type        String // theme, plugin, role, decoration, merch
+  minRank     Int?
+  minAge      Int?
+  userItems   UserItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model UserItem {
+  id         String   @id @default(uuid())
+  userId     String
+  itemId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  acquiredAt DateTime @default(now())
+
+  @@unique([userId, itemId])
+}
+
+model Match {
+  id          String      @id @default(uuid())
+  gameType    String // chess, checkers, car_racing, stunt_bike
+  playerAId   String
+  playerBId   String?
+  wager       Decimal     @db.Decimal(10, 2)
+  status      MatchStatus @default(PENDING)
+  winnerId    String?
+  telemetry   Json?
+  playerA     User        @relation("PlayerAMatches", fields: [playerAId], references: [id])
+  playerB     User?       @relation("PlayerBMatches", fields: [playerBId], references: [id])
+  winner      User?       @relation("WonMatches", fields: [winnerId], references: [id])
+  createdAt   DateTime    @default(now())
+  completedAt DateTime?
+
+  @@index([gameType, status])
+}
+
+model Transaction {
+  id          String            @id @default(uuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Decimal           @db.Decimal(12, 2)
+  type        TransactionType
+  status      TransactionStatus @default(PENDING)
+  referenceId String?
+  createdAt   DateTime          @default(now())
+
+  @@index([userId, type])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  details     Json?
+  performedBy String?
+  user        User?    @relation(fields: [performedBy], references: [id], onDelete: SetNull)
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([action, createdAt])
+}
