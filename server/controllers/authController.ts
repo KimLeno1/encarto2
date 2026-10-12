@@ -13,6 +13,7 @@ import {
   extractSessionToken,
 } from '../utils/session.ts';
 import { logAuditEvent } from '../utils/audit.ts';
+import { env } from '../config/env.ts';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -92,14 +93,13 @@ export class AuthController {
 
       res.cookie('encarto_session', token, {
         httpOnly: true,
-        secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+        secure: env.NODE_ENV === 'production' || req.secure || req.headers['x-forwarded-proto'] === 'https',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
       res.status(201).json({
         message: 'Account enlisted successfully.',
-        token,
         user: {
           id: user.id,
           username: user.username,
@@ -176,7 +176,6 @@ export class AuthController {
 
       res.json({
         message: 'Station access granted.',
-        token,
         user: {
           id: user.id,
           username: user.username,
