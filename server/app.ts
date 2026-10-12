@@ -17,10 +17,20 @@ app.use(
   })
 );
 
-// CORS
+// CORS: allow only explicitly configured browser origins. Requests without an Origin
+// (for example, server-to-server health checks) are not browser CORS requests.
+const allowedOrigins = new Set(
+  env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+);
 app.use(
   cors({
-    origin: true,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
   })
 );
