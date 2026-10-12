@@ -27,6 +27,17 @@ if (isProduction) {
   if (process.env.ADMIN_PASSWORD === 'EncartoAdmin2026!' || process.env.ADMIN_PASSWORD?.startsWith('replace-with-')) {
     throw new Error('ADMIN_PASSWORD must not use the example/default password in production.');
   }
+
+  if ((process.env.ADMIN_USERNAME || '').startsWith('replace-with-') ||
+      process.env.ADMIN_EMAIL === 'admin@example.com' ||
+      (process.env.ADMIN_PASSWORD || '').length < 16) {
+    throw new Error('Production admin provisioning values must be explicitly replaced; ADMIN_PASSWORD must be at least 16 characters.');
+  }
+
+  const configuredOrigins = (process.env.CORS_ORIGIN || '').split(',').map((origin) => origin.trim());
+  if (configuredOrigins.some((origin) => !origin || origin === '*' || origin.includes('*'))) {
+    throw new Error('CORS_ORIGIN must contain exact trusted origins and must not use wildcard values in production.');
+  }
 }
 
 const envSchema = z.object({
