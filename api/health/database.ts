@@ -1,5 +1,5 @@
 import { prisma } from "../../server/db/client.js";
-import { applyApiCors, handleOptions, methodNotAllowed } from "../_lib/http.js";
+import { applyApiCors, handleOptions, methodNotAllowed } from "../../server/vercelApiHttp.js";
 
 export default async function handler(req: any, res: any) {
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Untrusted request origin." });
