@@ -1,4 +1,4 @@
-import { applyApiCors, clearSessionCookie, handleOptions, methodNotAllowed } from "../_lib/http.js";
+import { applyApiCors, clearSessionCookie, handleOptions, methodNotAllowed } from "../../server/vercelApiHttp.js";
 
 export default function handler(req: any, res: any) {
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Untrusted request origin." });
