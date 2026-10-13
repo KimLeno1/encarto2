@@ -1,8 +1,8 @@
 import { Server, Socket } from 'socket.io';
-import { MatchSession } from '../services/matchmakingService.ts';
-import { MatchPersistenceService } from '../services/matchPersistenceService.ts';
-import { BotBrain } from '../../game/ai/botBrain.ts';
-import { BOT_DIFFICULTY_PRESETS } from '../../game/ai/botConfig.ts';
+import { MatchSession } from '../services/matchmakingService.js';
+import { MatchPersistenceService } from '../services/matchPersistenceService.js';
+import { BotBrain } from '../../game/ai/botBrain.js';
+import { BOT_DIFFICULTY_PRESETS } from '../../game/ai/botConfig.js';
 
 export interface AuthoritativePlayerState {
   id: string;

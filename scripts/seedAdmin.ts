@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { prisma } from '../server/db/client.ts';
-import { env } from '../server/config/env.ts';
+import { prisma } from '../server/db/client.js';
+import { env } from '../server/config/env.js';
 
 async function seedAdmin(): Promise<void> {
   // Configuration is validated at startup. Never fall back to a public/default password.

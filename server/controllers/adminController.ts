@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { prisma } from '../db/client.ts';
-import { logAuditEvent } from '../utils/audit.ts';
-import { checkDatabaseConnection } from '../db/client.ts';
-import { PROGRESSION_CONFIG } from '../config/progressionConfig.ts';
+import { prisma } from '../db/client.js';
+import { logAuditEvent } from '../utils/audit.js';
+import { checkDatabaseConnection } from '../db/client.js';
+import { PROGRESSION_CONFIG } from '../config/progressionConfig.js';
 
 // In-memory runtime configuration store for dynamic admin adjustments
 export const runtimeAdminConfig = {

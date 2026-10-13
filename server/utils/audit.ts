@@ -1,4 +1,4 @@
-import { prisma } from '../db/client.ts';
+import { prisma } from '../db/client.js';
 
 export async function logAuditEvent(params: {
   action: string;

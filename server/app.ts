@@ -3,10 +3,10 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
-import { env } from './config/env.ts';
-import { checkDatabaseConnection, prisma } from './db/client.ts';
-import { authRouter } from './routes/authRoutes.ts';
-import { errorHandler } from './middlewares/errorHandler.ts';
+import { env } from './config/env.js';
+import { checkDatabaseConnection, prisma } from './db/client.js';
+import { authRouter } from './routes/authRoutes.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 export const app = express();
 
@@ -96,15 +96,15 @@ app.get('/api/health/database', async (req: Request, res: Response) => {
 app.use('/api/auth', authRouter);
 
 // Matchmaking and Matches API
-import { matchmakingRouter } from './routes/matchmakingRoutes.ts';
+import { matchmakingRouter } from './routes/matchmakingRoutes.js';
 app.use('/api/matchmaking', matchmakingRouter);
 
 // Progression, Rank Tiers, and Match History API
-import { progressionRouter } from './routes/progressionRoutes.ts';
+import { progressionRouter } from './routes/progressionRoutes.js';
 app.use('/api/progression', progressionRouter);
 
 // Admin Control Panel API
-import { adminRouter } from './routes/adminRoutes.ts';
+import { adminRouter } from './routes/adminRoutes.js';
 app.use('/api/admin', adminRouter);
 
 // Centralized error handler

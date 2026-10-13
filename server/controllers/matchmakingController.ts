@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { matchmakingService } from '../services/matchmakingService.ts';
-import { MatchPersistenceService } from '../services/matchPersistenceService.ts';
-import { queueRequestSchema } from '../validators/matchmaking.ts';
+import { matchmakingService } from '../services/matchmakingService.js';
+import { MatchPersistenceService } from '../services/matchPersistenceService.js';
+import { queueRequestSchema } from '../validators/matchmaking.js';
 
 export class MatchmakingController {
   static async getQueueStatus(req: Request, res: Response): Promise<void> {
