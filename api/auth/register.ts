@@ -3,7 +3,7 @@ import { prisma } from "../../server/db/client.js";
 import { registerSchema } from "../../server/validators/auth.js";
 import { createSessionToken } from "../../server/utils/session.js";
 import { logAuditEvent } from "../../server/utils/audit.js";
-import { applyApiCors, handleOptions, methodNotAllowed, readJsonBody, setSessionCookie } from "../_lib/http.js";
+import { applyApiCors, handleOptions, methodNotAllowed, readJsonBody, setSessionCookie } from "../../server/vercelApiHttp.js";
 
 export default async function handler(req: any, res: any) {
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Untrusted request origin." });
