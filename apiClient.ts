@@ -1,5 +1,22 @@
 export const API_BASE_URL = '/api';
 
+async function parseApiResponse<T>(response: Response): Promise<T> {
+  const raw = await response.text();
+  if (!raw) return {} as T;
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const detail = raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180);
+    return {
+      error: response.ok
+        ? "The server returned an invalid response."
+        : `API request failed (HTTP ${response.status}). The API may not be deployed correctly.${detail ? ` Details: ${detail}` : ""}`,
+      status: response.status,
+    } as T;
+  }
+}
+
 export interface AuthResponse {
   message?: string;
   user?: any;
@@ -22,7 +39,7 @@ export const api = {
       credentials: 'include',
       body: JSON.stringify(data),
     });
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async login(credentials: {
@@ -35,7 +52,7 @@ export const api = {
       credentials: 'include',
       body: JSON.stringify(credentials),
     });
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async logout(): Promise<{ message: string }> {
@@ -43,17 +60,14 @@ export const api = {
       method: 'POST',
       credentials: 'include',
     });
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async getMe(): Promise<{ user?: any; error?: string }> {
     const res = await fetch(`${API_BASE_URL}/auth/me`, {
       credentials: 'include',
     });
-    if (!res.ok) {
-      return { error: 'Not authenticated' };
-    }
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async updateProfile(userId: string, data: any): Promise<AuthResponse> {
@@ -63,7 +77,7 @@ export const api = {
       credentials: 'include',
       body: JSON.stringify(data),
     });
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async getMyProgression(): Promise<any> {
@@ -71,7 +85,7 @@ export const api = {
       credentials: 'include',
     });
     if (!res.ok) return null;
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async getUserProgression(userId: string): Promise<any> {
@@ -79,7 +93,7 @@ export const api = {
       credentials: 'include',
     });
     if (!res.ok) return null;
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async getMatchHistory(userId: string, filter?: { mode?: string; gameType?: string }): Promise<any> {
@@ -91,7 +105,7 @@ export const api = {
       credentials: 'include',
     });
     if (!res.ok) return { history: [] };
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async getLeaderboard(): Promise<any> {
@@ -99,7 +113,7 @@ export const api = {
       credentials: 'include',
     });
     if (!res.ok) return { leaderboard: [] };
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async completeBotMatch(payload: {
@@ -119,21 +133,21 @@ export const api = {
       credentials: 'include',
       body: JSON.stringify(payload),
     });
-    return res.json();
+    return parseApiResponse(res);
   },
 
   // Admin Operations
   async getAdminStats(): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/admin/stats`, { credentials: 'include' });
     if (!res.ok) throw new Error('Unauthorized or failed to fetch admin stats');
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async getAdminUsers(search?: string): Promise<any> {
     const query = search ? `?search=${encodeURIComponent(search)}` : '';
     const res = await fetch(`${API_BASE_URL}/admin/users${query}`, { credentials: 'include' });
     if (!res.ok) throw new Error('Unauthorized');
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async updateAdminUserRole(userId: string, role: string): Promise<any> {
@@ -143,7 +157,7 @@ export const api = {
       credentials: 'include',
       body: JSON.stringify({ role }),
     });
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async updateAdminUserStatus(userId: string, status: string): Promise<any> {
@@ -153,19 +167,19 @@ export const api = {
       credentials: 'include',
       body: JSON.stringify({ status }),
     });
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async getAdminMatches(): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/admin/matches`, { credentials: 'include' });
     if (!res.ok) throw new Error('Unauthorized');
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async getAdminAuditLogs(): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/admin/audit-logs`, { credentials: 'include' });
     if (!res.ok) throw new Error('Unauthorized');
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async configureGame(game: string, enabled: boolean): Promise<any> {
@@ -175,7 +189,7 @@ export const api = {
       credentials: 'include',
       body: JSON.stringify({ game, enabled }),
     });
-    return res.json();
+    return parseApiResponse(res);
   },
 
   async configureBots(difficulty: string, params: any): Promise<any> {
@@ -185,6 +199,6 @@ export const api = {
       credentials: 'include',
       body: JSON.stringify({ difficulty, ...params }),
     });
-    return res.json();
+    return parseApiResponse(res);
   },
 };
