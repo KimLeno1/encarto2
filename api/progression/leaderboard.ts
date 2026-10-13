@@ -1,1 +1,1 @@
-export { default } from '../_lib/express.js';
+export { default } from '../../server/vercelApp.js';
