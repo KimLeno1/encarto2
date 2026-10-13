@@ -8,75 +8,83 @@ export interface SessionData {
   createdAt: number;
 }
 
-// In-memory token store with TTL (backed by session ID)
-// Can be backed by Redis or DB in scale; acts as safe session store
-const sessionStore = new Map<string, SessionData>();
+type SignedSession = SessionData & { expiresAt: number };
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+function sign(payload: string): string {
+  return crypto.createHmac('sha256', env.SESSION_SECRET).update(payload).digest('base64url');
+}
+
+/**
+ * Stateless signed sessions work across serverless instances. The previous
+ * implementation depended on a process-local Map, which is not shared between
+ * Vercel invocations and caused valid logins to appear unauthenticated.
+ */
 export function createSessionToken(data: SessionData): string {
-  const token = crypto.randomBytes(32).toString('hex');
-  const signature = crypto
-    .createHmac('sha256', env.SESSION_SECRET)
-    .update(token)
-    .digest('hex');
-  
-  sessionStore.set(token, data);
-  return `${token}.${signature}`;
+  const payload = Buffer.from(JSON.stringify({
+    ...data,
+    expiresAt: data.createdAt + SESSION_TTL_MS,
+  } satisfies SignedSession)).toString('base64url');
+  return `${payload}.${sign(payload)}`;
 }
 
 export function verifySessionToken(signedToken: string): SessionData | null {
-  if (!signedToken || !signedToken.includes('.')) return null;
-  const [token, signature] = signedToken.split('.');
-  if (!token || !signature) return null;
+  if (!signedToken || typeof signedToken !== 'string') return null;
+  const separator = signedToken.lastIndexOf('.');
+  if (separator <= 0 || separator === signedToken.length - 1) return null;
 
-  const expectedSignature = crypto
-    .createHmac('sha256', env.SESSION_SECRET)
-    .update(token)
-    .digest('hex');
-
-  // Constant-time comparison
-  const sigBuffer = Buffer.from(signature, 'hex');
-  const expectedBuffer = Buffer.from(expectedSignature, 'hex');
-  if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+  const payload = signedToken.slice(0, separator);
+  const signature = signedToken.slice(separator + 1);
+  const expected = sign(payload);
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(actualBuffer, expectedBuffer)) {
     return null;
   }
 
-  const session = sessionStore.get(token);
-  if (!session) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Partial<SignedSession>;
+    const allowedRoles = ['USER', 'MODERATOR', 'ORGANIZER', 'ADMIN'];
+    if (
+      typeof parsed.userId !== 'string' ||
+      typeof parsed.username !== 'string' ||
+      typeof parsed.createdAt !== 'number' ||
+      typeof parsed.expiresAt !== 'number' ||
+      typeof parsed.role !== 'string' ||
+      !allowedRoles.includes(parsed.role) ||
+      parsed.expiresAt <= Date.now() ||
+      parsed.createdAt > Date.now() + 60_000
+    ) return null;
 
-  // Check 7 days expiration
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-  if (Date.now() - session.createdAt > sevenDaysMs) {
-    sessionStore.delete(token);
+    return {
+      userId: parsed.userId,
+      username: parsed.username,
+      role: parsed.role as SessionData['role'],
+      createdAt: parsed.createdAt,
+    };
+  } catch {
     return null;
   }
-
-  return session;
 }
 
-export function invalidateSessionToken(signedToken: string): void {
-  if (!signedToken || !signedToken.includes('.')) return;
-  const [token] = signedToken.split('.');
-  if (token) {
-    sessionStore.delete(token);
-  }
+/**
+ * Stateless tokens cannot be individually revoked without a durable session
+ * table or shared revocation store. Logout clears the HttpOnly browser cookie;
+ * password/role checks still reload the authoritative user from the database.
+ */
+export function invalidateSessionToken(_signedToken: string): void {
+  // Intentionally stateless; clearing the cookie ends the browser session.
 }
 
-export function invalidateAllUserSessions(userId: string): void {
-  for (const [token, session] of sessionStore.entries()) {
-    if (session.userId === userId) {
-      sessionStore.delete(token);
-    }
-  }
+export function invalidateAllUserSessions(_userId: string): void {
+  // Intentionally stateless; tokens expire after seven days.
 }
 
 export function extractSessionToken(req: any): string | null {
-  if (req.cookies && req.cookies.encarto_session) {
-    return req.cookies.encarto_session;
-  }
+  if (req.cookies && req.cookies.encarto_session) return req.cookies.encarto_session;
   const authHeader = req.headers?.authorization;
   if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
   return null;
 }
-
