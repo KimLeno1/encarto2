@@ -6,7 +6,7 @@ type ChatMessage={role:'user'|'assistant';content:string};
 type ModelOption={id:string;label:string};
 const labels:Record<Provider,string>={nvidia:'NVIDIA NIM',openai:'OpenAI / ChatGPT API',anthropic:'Anthropic Claude',ollama:'Ollama (local)',hermes:'Hermes Agent (local)'};
 const systemPrompt='You are Encarto AI, a helpful assistant for Encarto gaming. Use read-only Encarto tools when helpful. Never claim to change accounts, ranks, match results, wallet balances, or settings.';
-const rootURL=(v:string)=>v.trim().replace(/\\/+$/,'').replace(/\\/v1$/i,'');
+const rootURL=(v:string)=>{let s=v.trim();while(s.endsWith('/'))s=s.slice(0,-1);if(s.toLowerCase().endsWith('/v1'))s=s.slice(0,-3);return s;};
 async function readJSON(res:Response):Promise<any>{const raw=await res.text();let data:any;try{data=raw?JSON.parse(raw):{};}catch{throw new Error('The service returned HTTP '+res.status+' with a non-JSON response. Check endpoint and CORS settings.');}if(!res.ok)throw new Error(data?.error||data?.message||('Request failed (HTTP '+res.status+').'));return data;}
 const toolSpecs=encartoToolDefinitions.map(t=>({type:'function',function:{name:t.function.name,description:t.function.description,parameters:t.function.parameters}}));
 async function runOllama(baseURL:string,model:string,history:ChatMessage[]){
