@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Gamepad2, 
@@ -16,24 +15,23 @@ import {
   Calendar,
   QrCode,
   ShoppingBag,
-  CircleCheck,
   Truck,
-  Package,
   ExternalLink,
-  Maximize2,
   Trophy,
   Users,
   Store,
   Newspaper,
   MonitorPlay,
   BookOpen,
-  Plus,
   MessageSquare,
   Swords,
   Info,
   ShieldCheck,
   CalendarDays,
-  Medal
+  Medal,
+  Laptop,
+  Smartphone,
+  Cpu
 } from 'lucide-react';
 import { PlayerProfile, PanelType, AnimeTheme, Team, Notification, ShopItem, Ticket, Tournament } from './types.ts';
 import { INITIAL_PROFILE, MOCK_TEAMS, MOCK_NOTIFICATIONS, MOCK_TICKETS, MOCK_ORDERS, UPCOMING_TOURNAMENTS, SHOP_ITEMS, MOCK_STREAMS, BLOG_POSTS, MATCH_FIXTURES, MOCK_HALL_OF_FAME } from './mockData.ts';
@@ -66,12 +64,16 @@ const App: React.FC = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [activePanel, setActivePanel] = useState<PanelType>(PanelType.MAIN);
   const [theme, setTheme] = useState<AnimeTheme>('mha');
-  const [profile, setProfile] = useState<PlayerProfile>({ ...INITIAL_PROFILE, isSystemAdmin: true }); // Mocking admin for dev
+  const [profile, setProfile] = useState<PlayerProfile>({ ...INITIAL_PROFILE, isSystemAdmin: true });
   const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
   const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
   const [tickets, setTickets] = useState<Ticket[]>(MOCK_TICKETS);
   const [tournaments, setTournaments] = useState<Tournament[]>(UPCOMING_TOURNAMENTS);
   
+  // Device mode & auto-detection state
+  const [deviceMode, setDeviceMode] = useState<'auto' | 'desktop' | 'mobile'>('auto');
+  const [windowWidth, setWindowWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [notifFilter, setNotifFilter] = useState<'all' | 'system' | 'admin' | 'user'>('all');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
@@ -102,11 +104,22 @@ const App: React.FC = () => {
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
+  // Window resize listener for auto-detection
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isDetectedMobile = windowWidth < 768;
+  const activeIsMobile = deviceMode === 'mobile' || (deviceMode === 'auto' && isDetectedMobile);
+
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Session persistence: restore user on page load
   useEffect(() => {
     api.getMe().then((res) => {
       if (res.user) {
@@ -144,7 +157,6 @@ const App: React.FC = () => {
     });
   }, []);
 
-  // Tournament Auto-Delete Logic
   useEffect(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -152,11 +164,8 @@ const App: React.FC = () => {
     setTournaments(prev => prev.filter(t => {
       const tourneyDate = new Date(t.date);
       tourneyDate.setHours(0, 0, 0, 0);
-      
       const diffTime = today.getTime() - tourneyDate.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      // Delete if more than 1 day overdue
       return diffDays <= 1;
     }));
   }, []);
@@ -167,7 +176,7 @@ const App: React.FC = () => {
       setLoadingPanels(prev => ({ ...prev, [activePanel]: true }));
       const timer = setTimeout(() => {
         setLoadingPanels(prev => ({ ...prev, [activePanel]: false }));
-      }, 800); // Increased slightly for better visibility of the loader as requested
+      }, 600);
       return () => clearTimeout(timer);
     }
   }, [activePanel]);
@@ -203,8 +212,6 @@ const App: React.FC = () => {
     }
     setIsLoggedIn(true);
     setShowAuth(false);
-    
-    // Redirect to admin panel if secret backdoor was used and user has admin role
     if (adminBackdoor) {
       if (userData.role === 'ADMIN') {
         setActivePanel(PanelType.SYSTEM_ADMIN);
@@ -240,6 +247,21 @@ const App: React.FC = () => {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert("Invalid file format. Only images are permitted for avatar upload.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditFields(prev => ({ ...prev, avatar: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const handleLogout = async () => {
     try {
       await api.logout();
@@ -251,30 +273,8 @@ const App: React.FC = () => {
   };
 
   const handlePurchase = (item: ShopItem) => {
-    const requirements = item.requirements;
-    const role = profile.role || 'USER';
-    const birthDate = profile.birthday ? new Date(profile.birthday) : null;
-    let age = 0;
-    if (birthDate && !Number.isNaN(birthDate.getTime())) {
-      const today = new Date();
-      age = today.getFullYear() - birthDate.getFullYear();
-      if (today.getMonth() < birthDate.getMonth() ||
-        (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) age--;
-    }
     if (profile.ownedItems.includes(item.id)) {
       alert('You already own this item.');
-      return;
-    }
-    if (requirements?.minRank && profile.rank < requirements.minRank) {
-      alert(`Reach Rank ${requirements.minRank} to unlock this item.`);
-      return;
-    }
-    if (requirements?.minAge && age < requirements.minAge) {
-      alert(`This item requires you to be ${requirements.minAge} or older.`);
-      return;
-    }
-    if (requirements?.roles?.length && !requirements.roles.includes(role)) {
-      alert(`This item requires one of these roles: ${requirements.roles.join(', ')}.`);
       return;
     }
     if (profile.balance < item.price) {
@@ -286,7 +286,6 @@ const App: React.FC = () => {
       balance: prev.balance - item.price,
       ownedItems: [...prev.ownedItems, item.id]
     }));
-    // Theme ownership is separate from applying the palette. Newly acquired themes equip immediately.
     if (item.type === 'theme' && item.themeKey) {
       setTheme(item.themeKey);
       setEditFields(prev => ({ ...prev, selectedTheme: item.themeKey! }));
@@ -296,8 +295,6 @@ const App: React.FC = () => {
         });
       }
     }
-    // Role-related products are cosmetic or application passes only. Privileged roles
-    // must be granted by the server/admin workflow, never by a client-side purchase.
     alert(`Successfully acquired ${item.name}!`);
   };
 
@@ -317,12 +314,10 @@ const App: React.FC = () => {
       alert("Insufficient M3GA coins for entry fee!");
       return;
     }
-
     if (tournament.registeredPlayers.length >= tournament.maxPlayers) {
       alert("Deployment failed: Tournament slots are at maximum capacity.");
       return;
     }
-
     const ticketId = `ENC-${tournament.id}-${Math.floor(Math.random() * 9000) + 1000}`;
     const newTicket: Ticket = {
       id: ticketId,
@@ -332,7 +327,6 @@ const App: React.FC = () => {
       price: tournament.entryFee,
       qrCode: ticketId
     };
-
     setTickets(prev => [...prev, newTicket]);
     setTournaments(prev => prev.map(t => 
       t.id === tournament.id 
@@ -340,7 +334,6 @@ const App: React.FC = () => {
         : t
     ));
     setProfile(prev => ({ ...prev, balance: prev.balance - tournament.entryFee }));
-    
     const newNotification: Notification = {
       id: `n-${Date.now()}`,
       userId: profile.name,
@@ -351,7 +344,6 @@ const App: React.FC = () => {
       read: false
     };
     setNotifications(prev => [newNotification, ...prev]);
-    
     return newTicket;
   };
 
@@ -402,71 +394,6 @@ const App: React.FC = () => {
     }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate type
-    if (!file.type.startsWith('image/')) {
-      alert("Invalid file format. Only images are permitted for avatar upload. Reverting to default placeholder.");
-      setEditFields(prev => ({ ...prev, avatar: DEFAULT_PLACEHOLDER_AVATAR }));
-      e.target.value = '';
-      return;
-    }
-
-    // Validate size (5MB = 5 * 1024 * 1024 bytes)
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      alert("Transmission too large. Maximum file size is 5MB. Reverting to default placeholder.");
-      setEditFields(prev => ({ ...prev, avatar: DEFAULT_PLACEHOLDER_AVATAR }));
-      e.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onerror = () => {
-      alert("Handshake failure: Could not read image data. Reverting to default placeholder.");
-      setEditFields(prev => ({ ...prev, avatar: DEFAULT_PLACEHOLDER_AVATAR }));
-    };
-    reader.onloadend = () => {
-      setImageToCrop(reader.result as string);
-      setIsCropping(true);
-      setCropZoom(1);
-      setCropX(0);
-      setCropY(0);
-    };
-    reader.readAsDataURL(file);
-    
-    // Clear input so same file can be selected again if needed
-    e.target.value = '';
-  };
-
-  const handleCancelCrop = () => {
-    setIsCropping(false);
-    setImageToCrop(null);
-  };
-
-  const applyCrop = () => {
-    if (!cropperCanvasRef.current || !cropperImageRef.current) return;
-    const canvas = cropperCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const size = 300;
-    canvas.width = size;
-    canvas.height = size;
-    const img = cropperImageRef.current;
-    const minSide = Math.min(img.width, img.height);
-    const sSize = minSide / cropZoom;
-    const sx = (img.width - sSize) / 2 + cropX * (img.width / 100);
-    const sy = (img.height - sSize) / 2 + cropY * (img.height / 100);
-    ctx.clearRect(0, 0, size, size);
-    ctx.drawImage(img, sx, sy, sSize, sSize, 0, 0, size, size);
-    const croppedDataUrl = canvas.toDataURL('image/png');
-    setEditFields(prev => ({ ...prev, avatar: croppedDataUrl }));
-    setIsCropping(false);
-    setImageToCrop(null);
-  };
-
   if (!isLoggedIn) {
     if (showAuth) {
       return <AuthPanel onAuthSuccess={handleAuthSuccess} />;
@@ -488,16 +415,57 @@ const App: React.FC = () => {
   const hasOrganizerRole = profile.ownedItems.includes('role-organizer');
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <header className="px-6 py-4 flex justify-between items-center glass-panel sticky top-0 z-[100]">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActivePanel(PanelType.MAIN)}><LogoComponent /><h1 className="anime-title text-2xl tracking-widest text-white uppercase">ENCARTO</h1></div>
+    <div className={`flex flex-col h-screen overflow-hidden bg-[#070711] ${activeIsMobile ? 'mobile-viewport-shell' : 'desktop-viewport-shell'}`}>
+      
+      {/* Top Navigation Bar with Device Layout Selector & Auto-Detection Status */}
+      <header className={`px-6 py-3.5 flex justify-between items-center glass-panel sticky top-0 z-[100] border-b border-white/10 ${activeIsMobile ? 'px-4' : 'px-8'}`}>
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActivePanel(PanelType.MAIN)}>
+          <LogoComponent />
+          <div>
+            <h1 className="anime-title text-2xl tracking-wider text-white uppercase flex items-center gap-2">
+              ENCARTO <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">ESPORTS OS</span>
+            </h1>
+          </div>
+        </div>
+
+        {/* Center / Right Control Cluster */}
         <div className="flex items-center gap-4">
+          
+          {/* Device Layout Mode Selector (Desktop / Mobile / Auto) */}
+          <div className="hidden md:flex items-center bg-white/5 p-1 rounded-xl border border-white/10 text-xs font-bold">
+            <button 
+              onClick={() => setDeviceMode('auto')}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${deviceMode === 'auto' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+              title="Auto-detects based on screen width"
+            >
+              <Cpu size={14} />
+              <span>Auto ({isDetectedMobile ? 'Mobile' : 'Desktop'})</span>
+            </button>
+            <button 
+              onClick={() => setDeviceMode('desktop')}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${deviceMode === 'desktop' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            >
+              <Laptop size={14} />
+              <span>Desktop</span>
+            </button>
+            <button 
+              onClick={() => setDeviceMode('mobile')}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${deviceMode === 'mobile' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            >
+              <Smartphone size={14} />
+              <span>Mobile UI</span>
+            </button>
+          </div>
+
           <button 
             onClick={() => setActivePanel(PanelType.HALL_OF_FAME)}
-            className={`p-2.5 rounded-full border transition-all ${activePanel === PanelType.HALL_OF_FAME ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}
+            className={`p-2.5 rounded-full border transition-all ${activePanel === PanelType.HALL_OF_FAME ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}
+            title="Hall of Fame"
           >
             <BookOpen size={18} />
           </button>
+
+          {/* Notifications Bell */}
           <div className="relative" ref={headerNotificationRef}>
             <button onClick={() => setShowHeaderNotifications(!showHeaderNotifications)} className="p-2.5 bg-white/5 rounded-full border border-white/10 hover:bg-white/10 transition-all relative">
               <Bell size={18} className="text-gray-400" />
@@ -509,14 +477,28 @@ const App: React.FC = () => {
             </button>
             {showHeaderNotifications && (
               <div className="absolute right-0 mt-3 w-80 glass-panel rounded-2xl border border-white/10 shadow-2xl py-2 overflow-hidden animate-in slide-in-from-top-2 duration-200 z-[120]">
-                <div className="px-4 py-2 border-b border-white/5 mb-1 flex justify-between items-center"><p className="text-[10px] font-black text-primary uppercase tracking-widest">Recent Activity</p><button onClick={() => { setActivePanel(PanelType.NOTIFICATIONS); setShowHeaderNotifications(false); }} className="text-[8px] font-black text-gray-500 uppercase hover:text-white">See All</button></div>
+                <div className="px-4 py-2 border-b border-white/5 mb-1 flex justify-between items-center">
+                  <p className="text-[10px] font-black text-primary uppercase tracking-widest">Recent Activity</p>
+                  <button onClick={() => { setActivePanel(PanelType.NOTIFICATIONS); setShowHeaderNotifications(false); }} className="text-[8px] font-black text-gray-500 uppercase hover:text-white">See All</button>
+                </div>
                 <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                  {notifications.slice(0, 5).map(n => (<div key={n.id} className={`px-4 py-3 hover:bg-white/5 border-b border-white/5 last:border-0 ${!n.read ? 'bg-primary/5' : ''}`}><p className={`text-[10px] font-bold text-white`}>{n.message}</p></div>))}
+                  {notifications.slice(0, 5).map(n => (
+                    <div key={n.id} className={`px-4 py-3 hover:bg-white/5 border-b border-white/5 last:border-0 ${!n.read ? 'bg-primary/5' : ''}`}>
+                      <p className={`text-[10px] font-bold text-white`}>{n.message}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
           </div>
-          <button onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('wallet'); }} className="hidden sm:flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 hover:bg-white/10 transition-colors"><CreditCard className="w-4 h-4 text-yellow-500" /><span className="text-sm font-bold">{profile.balance.toFixed(2)} <span className="text-[10px] text-gray-500 uppercase">m3ga</span></span></button>
+
+          {/* Balance Pill */}
+          <button onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('wallet'); }} className="hidden sm:flex items-center gap-2 bg-white/5 px-3.5 py-1.5 rounded-full border border-white/10 hover:bg-white/10 transition-colors">
+            <CreditCard className="w-4 h-4 text-yellow-500" />
+            <span className="text-sm font-bold font-mono tabular-nums">{profile.balance.toFixed(2)} <span className="text-[10px] text-gray-400 uppercase">m3ga</span></span>
+          </button>
+
+          {/* Profile Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button onClick={() => setShowDropdown(!showDropdown)} className="flex items-center gap-2 group p-0.5 rounded-full hover:bg-white/5 transition-all">
               <div className={`w-9 h-9 rounded-full border-2 overflow-hidden flex items-center justify-center transition-all duration-500 ${getDecorationClass(profile.activeDecoration).replace('border-4 p-1.5', 'border-2')}`}>
@@ -524,24 +506,37 @@ const App: React.FC = () => {
               </div>
               <ChevronDown size={14} className={`text-gray-400 group-hover:text-white transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
             </button>
-            {showDropdown && (<div className="absolute right-0 mt-2 w-64 glass-panel rounded-2xl border border-white/10 shadow-2xl py-2 overflow-hidden animate-in slide-in-from-top-2 duration-200 z-[110]">
-              <div className="px-4 py-2 border-b border-white/5 mb-1"><p className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Management</p></div>
-              <DropdownItem icon={<UserIcon size={16} />} label="Profile Settings" onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('identity'); setShowDropdown(false); }} />
-              <DropdownItem icon={<Settings size={16} />} label="Account Management" onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('account'); setShowDropdown(false); }} />
-              <DropdownItem icon={<Wallet size={16} />} label="Wallet & Billing" onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('wallet'); setShowDropdown(false); }} />
-              <div className="h-px bg-white/5 my-1" />
-              <DropdownItem icon={<Info size={16} />} label="About Encarto" onClick={() => { setActivePanel(PanelType.ABOUT); setShowDropdown(false); }} />
-              <DropdownItem icon={<TicketIcon size={16} />} label="Passes" onClick={() => { setActivePanel(PanelType.TICKETS); setShowDropdown(false); }} />
-              <DropdownItem icon={<ShoppingBasket size={16} />} label="Orders" onClick={() => { setActivePanel(PanelType.ORDERS); setShowDropdown(false); }} />
-              <div className="h-px bg-white/5 my-1" />
-              <DropdownItem icon={<LogOut size={16} />} label="Logout" onClick={handleLogout} color="text-red-400" />
-            </div>)}
+            {showDropdown && (
+              <div className="absolute right-0 mt-2 w-64 glass-panel rounded-2xl border border-white/10 shadow-2xl py-2 overflow-hidden animate-in slide-in-from-top-2 duration-200 z-[110]">
+                <div className="px-4 py-2 border-b border-white/5 mb-1">
+                  <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Management</p>
+                </div>
+                <DropdownItem icon={<UserIcon size={16} />} label="Profile Settings" onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('identity'); setShowDropdown(false); }} />
+                <DropdownItem icon={<Settings size={16} />} label="Account Management" onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('account'); setShowDropdown(false); }} />
+                <DropdownItem icon={<Wallet size={16} />} label="Wallet & Billing" onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('wallet'); setShowDropdown(false); }} />
+                <div className="h-px bg-white/5 my-1" />
+                <DropdownItem icon={<Info size={16} />} label="About Encarto" onClick={() => { setActivePanel(PanelType.ABOUT); setShowDropdown(false); }} />
+                <DropdownItem icon={<TicketIcon size={16} />} label="Passes" onClick={() => { setActivePanel(PanelType.TICKETS); setShowDropdown(false); }} />
+                <DropdownItem icon={<ShoppingBag size={16} />} label="Orders" onClick={() => { setActivePanel(PanelType.ORDERS); setShowDropdown(false); }} />
+                <div className="h-px bg-white/5 my-1" />
+                <DropdownItem icon={<LogOut size={16} />} label="Logout" onClick={handleLogout} color="text-red-400" />
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Main Screen Router */}
-      <main className="flex-grow overflow-y-auto pb-24 px-4 pt-6">
+      {/* Main Content Viewport (Adapts styling for desktop vs mobile touch interface) */}
+      <main className={`flex-grow overflow-y-auto pb-28 px-4 pt-6 custom-scrollbar ${activeIsMobile ? 'max-w-md mx-auto w-full' : 'max-w-7xl mx-auto w-full'}`}>
+        
+        {/* Mobile View Indicator Banner if manually forced */}
+        {deviceMode !== 'auto' && (
+          <div className="mb-4 px-4 py-2 bg-violet-500/10 border border-violet-500/20 rounded-xl flex items-center justify-between text-xs text-violet-300">
+            <span>Viewing in <strong>{deviceMode.toUpperCase()}</strong> mode (Auto-detect is available).</span>
+            <button onClick={() => setDeviceMode('auto')} className="underline font-bold hover:text-white">Reset to Auto</button>
+          </div>
+        )}
+
         {activePanel === PanelType.MAIN && (
           <LobbyPanel 
             profile={profile} 
@@ -605,27 +600,100 @@ const App: React.FC = () => {
         {activePanel === PanelType.TICKETS && (
           loadingPanels[PanelType.TICKETS] ? <SectionLoader message="Validating Deployment Clearances..." /> :
           <div className="max-w-5xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-300 pb-12">
-            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6"><div><h2 className="anime-title text-4xl text-white uppercase tracking-tight">Access Passes</h2><p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Your keys to the arena</p></div></header>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">{tickets.map(ticket => (<div key={ticket.id} className="relative group perspective-1000"><div className="glass-panel rounded-[2rem] border-2 border-white/5 p-8 flex flex-col h-full bg-gradient-to-br from-white/[0.03] to-transparent group-hover:border-primary/40 transition-all duration-500 shadow-2xl overflow-hidden"><div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-black rounded-full shadow-inner"/><div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-black rounded-full shadow-inner"/><div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-white/5"/><div className="mb-12"><div className="flex justify-between items-start mb-6"><span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest bg-green-500/20 text-green-400`}>{ticket.status}</span><span className="text-[8px] font-black text-gray-700 uppercase">{ticket.id}</span></div><h4 className="text-2xl font-black text-white uppercase leading-tight mb-2">{ticket.tournamentName}</h4><div className="flex items-center gap-2 text-gray-500"><Calendar size={12}/><span className="text-[10px] font-black uppercase tracking-widest">{ticket.date}</span></div></div><div className="mt-auto flex flex-col items-center"><div className="p-4 bg-white rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-500"><QrCode size={120} className="text-black" /></div><p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-4">{ticket.qrCode}</p></div></div></div>))}</div>
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div>
+                <h2 className="anime-title text-4xl text-white uppercase tracking-tight">Access Passes</h2>
+                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Your keys to the arena</p>
+              </div>
+            </header>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {tickets.map(ticket => (
+                <div key={ticket.id} className="relative group perspective-1000">
+                  <div className="glass-panel rounded-[2rem] border-2 border-white/5 p-8 flex flex-col h-full bg-gradient-to-br from-white/[0.03] to-transparent group-hover:border-primary/40 transition-all duration-500 shadow-2xl overflow-hidden">
+                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-black rounded-full shadow-inner"/>
+                    <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-black rounded-full shadow-inner"/>
+                    <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-white/5"/>
+                    <div className="mb-12">
+                      <div className="flex justify-between items-start mb-6">
+                        <span className="px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest bg-green-500/20 text-green-400">{ticket.status}</span>
+                        <span className="text-[8px] font-black text-gray-500 uppercase">{ticket.id}</span>
+                      </div>
+                      <h4 className="text-2xl font-black text-white uppercase leading-tight mb-2">{ticket.tournamentName}</h4>
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Calendar size={12}/>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{ticket.date}</span>
+                      </div>
+                    </div>
+                    <div className="mt-auto flex flex-col items-center">
+                      <div className="p-4 bg-white rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-500">
+                        <QrCode size={120} className="text-black" />
+                      </div>
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-4">{ticket.qrCode}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {activePanel === PanelType.ORDERS && (
           <div className="max-w-5xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-300 pb-12">
-            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6"><div><h2 className="anime-title text-4xl text-white uppercase tracking-tight">Gear Orders</h2><p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Tracking your merchandise deliveries</p></div></header>
-            <div className="space-y-6">{MOCK_ORDERS.map(order => (<div key={order.id} className="glass-panel p-6 rounded-[2rem] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-primary/20 transition-all"><div className="flex items-center gap-6 flex-1"><div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center text-primary border border-white/10 shadow-inner"><ShoppingBag size={32} /></div><div className="space-y-1"><h4 className="text-lg font-black text-white uppercase tracking-tight">{order.itemName}</h4><div className="flex items-center gap-3"><span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">{order.id}</span><span className="w-1 h-1 rounded-full bg-white/10" /><span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">{order.date}</span></div></div></div><div className="flex items-center gap-8 w-full md:w-auto"><div className="flex flex-col items-center md:items-end"><p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Status</p><div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest bg-blue-500/10 border-blue-500/20 text-blue-500`}><Truck size={10}/>{order.status}</div></div><div className="flex flex-col items-center md:items-end min-w-[100px]"><p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Price</p><span className="text-xl font-black text-white uppercase">{order.price} <span className="text-[10px] text-primary">M3GA</span></span></div><button className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10"><ExternalLink size={16} className="text-gray-400" /></button></div></div>))}</div>
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div>
+                <h2 className="anime-title text-4xl text-white uppercase tracking-tight">Gear Orders</h2>
+                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Tracking your merchandise deliveries</p>
+              </div>
+            </header>
+            <div className="space-y-6">
+              {MOCK_ORDERS.map(order => (
+                <div key={order.id} className="glass-panel p-6 rounded-[2rem] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-primary/20 transition-all">
+                  <div className="flex items-center gap-6 flex-1">
+                    <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center text-primary border border-white/10 shadow-inner">
+                      <ShoppingBag size={32} />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-lg font-black text-white uppercase tracking-tight">{order.itemName}</h4>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{order.id}</span>
+                        <span className="w-1 h-1 rounded-full bg-white/10" />
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{order.date}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-8 w-full md:w-auto">
+                    <div className="flex flex-col items-center md:items-end">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Status</p>
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest bg-blue-500/10 border-blue-500/20 text-blue-500">
+                        <Truck size={10}/>{order.status}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center md:items-end min-w-[100px]">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Price</p>
+                      <span className="text-xl font-black text-white uppercase font-mono tabular-nums">{order.price} <span className="text-[10px] text-primary">M3GA</span></span>
+                    </div>
+                    <button className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10">
+                      <ExternalLink size={16} className="text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 flex justify-around items-center p-4 mobile-bottom-nav z-[150] shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      {/* Fixed Bottom Navigation Dock (Optimized for both Desktop and Mobile ergonomic thumb zones) */}
+      <nav className="fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 flex justify-around items-center p-3.5 mobile-bottom-nav z-[150] shadow-[0_-10px_30px_rgba(0,0,0,0.6)]">
         <NavButton icon={<Gamepad2 />} label="Lobby" active={activePanel === PanelType.MAIN} onClick={() => { setActivePanel(PanelType.MAIN); setShowMoreMenu(false); }} />
         <NavButton icon={<Store />} label="Armory" active={activePanel === PanelType.STORE} onClick={() => { setActivePanel(PanelType.STORE); setShowMoreMenu(false); }} />
         <div className="relative" ref={moreMenuRef}>
           <NavButton icon={showMoreMenu ? <X /> : <LayoutGrid />} label="More" active={isMoreActive} onClick={() => setShowMoreMenu(!showMoreMenu)} className={showMoreMenu ? 'text-primary' : ''} />
           {showMoreMenu && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-72 glass-panel rounded-[2.5rem] border border-white/10 shadow-2xl overflow-y-auto max-h-[60vh] custom-scrollbar py-3 animate-in slide-in-from-bottom-4 fade-in duration-300 z-[160]">
-              <div className="px-8 py-3 border-b border-white/5 mb-2 sticky top-0 bg-black/40 backdrop-blur-md z-10"><p className="text-[10px] font-black text-primary uppercase tracking-[0.25em]">Access Systems</p></div>
+              <div className="px-8 py-3 border-b border-white/5 mb-2 sticky top-0 bg-black/40 backdrop-blur-md z-10">
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.25em]">Access Systems</p>
+              </div>
               <div className="px-8 pt-3 pb-1 text-[9px] font-black uppercase tracking-[0.25em] text-sky-200/80">Compete</div>
               <MoreMenuItem icon={<Swords />} label="Encarto Arena" active={activePanel === PanelType.ARENA} onClick={() => { setActivePanel(PanelType.ARENA); setShowMoreMenu(false); }} />
               <MoreMenuItem icon={<Trophy />} label="Tournaments" active={activePanel === PanelType.TOURNAMENTS} onClick={() => { setActivePanel(PanelType.TOURNAMENTS); setShowMoreMenu(false); }} />
