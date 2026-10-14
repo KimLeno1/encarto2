@@ -10,5 +10,5 @@ import { app } from '../server/app.ts';
 export default app;
 
 export const config = {
-  maxDuration: 30,
+  maxDuration: 60,
 };
