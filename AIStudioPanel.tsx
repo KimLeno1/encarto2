@@ -3,12 +3,38 @@ import { Bot, BrainCircuit, Cpu, KeyRound, Loader2, RefreshCw, Send, ShieldCheck
 import { encartoToolDefinitions, executeEncartoTool } from './aiTools.ts';
 type Provider='nvidia'|'openai'|'anthropic'|'ollama'|'hermes';
 type ChatMessage={role:'user'|'assistant';content:string};
-type ModelOption={id:string;label:string};
+type ModelOption={id:string;label:string;provider?:string};
 const labels:Record<Provider,string>={nvidia:'NVIDIA NIM',openai:'OpenAI / ChatGPT API',anthropic:'Anthropic Claude',ollama:'Ollama (local)',hermes:'Hermes Agent (local)'};
 const systemPrompt='You are Encarto AI, a helpful assistant for Encarto gaming. Use read-only Encarto tools when helpful. Never claim to change accounts, ranks, match results, wallet balances, or settings.';
 const rootURL=(v:string)=>{let s=v.trim();while(s.endsWith('/'))s=s.slice(0,-1);if(s.toLowerCase().endsWith('/v1'))s=s.slice(0,-3);return s;};
 async function readJSON(res:Response):Promise<any>{const raw=await res.text();let data:any;try{data=raw?JSON.parse(raw):{};}catch{throw new Error('The service returned HTTP '+res.status+' with a non-JSON response. Check endpoint and CORS settings.');}if(!res.ok)throw new Error(data?.error||data?.message||('Request failed (HTTP '+res.status+').'));return data;}
 const toolSpecs=encartoToolDefinitions.map(t=>({type:'function',function:{name:t.function.name,description:t.function.description,parameters:t.function.parameters}}));
+const hermesModelOptions=(payload:any):ModelOption[]=>{
+ const rows:ModelOption[]=[];
+ const providers=Array.isArray(payload?.providers)?payload.providers:Array.isArray(payload?.data)?payload.data:Array.isArray(payload?.options)?payload.options:[];
+ for(const entry of providers){
+  if(!entry||typeof entry!=='object')continue;
+  const provider=String(entry.provider||entry.slug||entry.provider_id||entry.id||entry.name||'');
+  const list=Array.isArray(entry.models)?entry.models:Array.isArray(entry.options)?entry.options:Array.isArray(entry.model_options)?entry.model_options:[];
+  for(const model of list){
+   if(typeof model==='string'){rows.push({id:model,label:(provider?provider+' / ':'')+model,provider:provider||undefined});continue;}
+   if(!model||typeof model!=='object')continue;
+   const id=String(model.id||model.model_id||model.model||model.name||'');
+   if(id)rows.push({id,label:(provider?provider+' / ':'')+String(model.display_name||model.label||model.name||id),provider:String(model.provider||provider||'')||undefined});
+  }
+ }
+ if(!rows.length){
+  const simple=Array.isArray(payload?.models)?payload.models:Array.isArray(payload?.data)?payload.data:[];
+  for(const model of simple){
+   if(typeof model==='string')rows.push({id:model,label:model});
+   else if(model&&typeof model==='object'){const id=String(model.id||model.model_id||model.model||model.name||'');if(id)rows.push({id,label:String(model.display_name||model.label||id),provider:typeof model.provider==='string'?model.provider:undefined});}
+  }
+ }
+ const seen=new Set<string>();
+ return rows.filter(m=>{const key=(m.provider||'')+'::'+m.id;if(seen.has(key))return false;seen.add(key);return true;});
+};
+const optionValue=(model:ModelOption)=>model.provider?model.provider+'::'+model.id:model.id;
+const selectedOption=(models:ModelOption[],value:string)=>models.find(m=>optionValue(m)===value);
 async function runOllama(baseURL:string,model:string,history:ChatMessage[]){
  const messages:any[]=[{role:'system',content:systemPrompt},...history],toolsUsed:string[]=[];
  for(let round=0;round<=3;round++){
@@ -28,19 +54,37 @@ const AIStudioPanel:React.FC=()=>{
  const [models,setModels]=useState<ModelOption[]>([]),[selectedModel,setSelectedModel]=useState(''),[messages,setMessages]=useState<ChatMessage[]>([]),[input,setInput]=useState('');
  const [loadingModels,setLoadingModels]=useState(false),[sending,setSending]=useState(false),[error,setError]=useState(''),[toolsUsed,setToolsUsed]=useState<string[]>([]);
  const cloud=useMemo(()=>['nvidia','openai','anthropic'].includes(provider),[provider]),localURL=provider==='ollama'?ollamaURL:hermesURL;
- const changeProvider=(p:Provider)=>{setProvider(p);setApiKey('');setModels([]);setSelectedModel('');setError('');setToolsUsed([]);};
+ const changeProvider=(p:Provider)=>{setProvider(p);setApiKey('');setModels([]);setSelectedModel('');setMessages([]);setError('');setToolsUsed([]);};
  const fetchModels=async()=>{setLoadingModels(true);setError('');setModels([]);setSelectedModel('');try{let payload:any;
   if(cloud){if(!apiKey.trim())throw new Error('Enter the provider API key first.');payload=await readJSON(await fetch('/api/ai/models',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider,apiKey:apiKey.trim()})}));}
-  else{if(!rootURL(localURL))throw new Error('Enter the local service address.');const url=provider==='ollama'?rootURL(ollamaURL)+'/api/tags':rootURL(hermesURL)+'/v1/models';const h:Record<string,string>={};if(provider==='hermes'){if(!apiKey.trim())throw new Error('Enter the Hermes API_SERVER_KEY configured on your computer.');h.Authorization='Bearer '+apiKey.trim();}payload=await readJSON(await fetch(url,{headers:h,cache:'no-store'}));
-   if(provider==='ollama')payload={models:(Array.isArray(payload?.models)?payload.models:[]).map((m:any)=>({id:String(m?.name||m?.model||''),label:String(m?.name||m?.model||'')})).filter((m:ModelOption)=>m.id)};
-   else payload={models:(Array.isArray(payload?.data)?payload.data:[]).map((m:any)=>({id:String(m?.id||''),label:String(m?.id||'')})).filter((m:ModelOption)=>m.id)};}
-  const found:ModelOption[]=Array.isArray(payload?.models)?payload.models:[];setModels(found);if(found.length)setSelectedModel(found[0].id);else setError('No models returned. Check the key, endpoint, installed models, and provider access.');
+  else{
+   if(!rootURL(localURL))throw new Error('Enter the local service address.');
+   const h:Record<string,string>={};
+   if(provider==='hermes'){
+    if(!apiKey.trim())throw new Error('Enter the Hermes API_SERVER_KEY configured on your computer.');
+    h.Authorization='Bearer '+apiKey.trim();
+    try{
+     payload=await readJSON(await fetch(rootURL(hermesURL)+'/api/model/options?refresh=1',{headers:h,cache:'no-store'}));
+     let found=hermesModelOptions(payload);
+     if(found.length)payload={models:found};
+     else payload=await readJSON(await fetch(rootURL(hermesURL)+'/v1/models',{headers:h,cache:'no-store'}));
+    }catch{
+     payload=await readJSON(await fetch(rootURL(hermesURL)+'/v1/models',{headers:h,cache:'no-store'}));
+    }
+    if(!Array.isArray(payload?.models))payload={models:hermesModelOptions(payload)};
+    else if(payload.models.length&&payload.models[0]?.id===undefined)payload={models:hermesModelOptions(payload)};
+   }else{
+    payload=await readJSON(await fetch(rootURL(ollamaURL)+'/api/tags',{cache:'no-store'}));
+    payload={models:(Array.isArray(payload?.models)?payload.models:[]).map((m:any)=>({id:String(m?.name||m?.model||''),label:String(m?.name||m?.model||'')})).filter((m:ModelOption)=>m.id)};
+   }
+  }
+  const found:ModelOption[]=Array.isArray(payload?.models)?payload.models:[];setModels(found);if(found.length)setSelectedModel(optionValue(found[0]));else setError('No models returned. Check the key, endpoint, installed models, and provider access.');
  }catch(e){setError(e instanceof Error?e.message:'Could not load models.');}finally{setLoadingModels(false);}};
- const send=async(event:React.FormEvent)=>{event.preventDefault();const prompt=input.trim();if(!prompt||sending)return;if(!selectedModel){setError('Fetch models and select a model before sending.');return;}if((cloud||provider==='hermes')&&!apiKey.trim()){setError('Enter the API key before sending.');return;}
+ const send=async(event:React.FormEvent)=>{event.preventDefault();const prompt=input.trim();if(!prompt||sending)return;if(!selectedModel){setError('Fetch models and select a model before sending.');return;}const selected=selectedOption(models,selectedModel);if(!selected){setError('Please select a model returned by the selected provider.');return;}if((cloud||provider==='hermes')&&!apiKey.trim()){setError('Enter the API key before sending.');return;}
   const history=[...messages,{role:'user' as const,content:prompt}];setMessages(history);setInput('');setSending(true);setError('');setToolsUsed([]);try{let result:{content:string;toolsUsed?:string[]};
    if(cloud)result=await readJSON(await fetch('/api/ai/chat',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider,apiKey:apiKey.trim(),model:selectedModel,messages:history})}));
    else if(provider==='ollama')result=await runOllama(ollamaURL,selectedModel,history);
-   else{const payload=await readJSON(await fetch(rootURL(hermesURL)+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+apiKey.trim()},body:JSON.stringify({model:selectedModel,messages:[{role:'system',content:systemPrompt},...history],max_tokens:1200})}));const text=payload?.choices?.[0]?.message?.content;result={content:typeof text==='string'?text:''};}
+   else{const payload=await readJSON(await fetch(rootURL(hermesURL)+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+apiKey.trim()},body:JSON.stringify({model:selected.id,...(selected.provider?{provider:selected.provider}:{}),messages:[{role:'system',content:systemPrompt},...history],max_tokens:1200})}));const text=payload?.choices?.[0]?.message?.content;result={content:typeof text==='string'?text:''};}
    setMessages(curr=>[...curr,{role:'assistant',content:result.content||'The model returned an empty response.'}]);setToolsUsed(result.toolsUsed||[]);
   }catch(e){setError(e instanceof Error?e.message:'The AI request failed.');}finally{setSending(false);}};
  const clearChat=()=>{setMessages([]);setToolsUsed([]);setError('');};
@@ -53,7 +97,7 @@ const AIStudioPanel:React.FC=()=>{
     {provider==='ollama'&&<div><label className='block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2'>Ollama address</label><input value={ollamaURL} onChange={e=>setOllamaURL(e.target.value)} spellCheck={false} className='w-full rounded-xl border border-white/10 bg-black/50 text-white px-3 py-3 text-sm'/><p className='text-xs text-gray-500 mt-2'>Install Ollama and pull a tool-capable model. Configure allowed origins for the actual Encarto site origin. Local browser access may request permission.</p></div>}
     {provider==='hermes'&&<div><label className='block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2'>Hermes Agent address</label><input value={hermesURL} onChange={e=>setHermesURL(e.target.value)} spellCheck={false} className='w-full rounded-xl border border-white/10 bg-black/50 text-white px-3 py-3 text-sm'/><div className='text-xs text-gray-500 mt-2 space-y-1'><p>Install and configure Hermes separately, then run <code>hermes gateway</code>.</p><p>Set <code>API_SERVER_ENABLED=true</code>, a strong <code>API_SERVER_KEY</code>, and exact <code>API_SERVER_CORS_ORIGINS</code>.</p><p>Hermes uses its own configured model and native agent tools. Its model list may show an alias.</p></div></div>}
     <button onClick={fetchModels} disabled={loadingModels} className='w-full flex justify-center items-center gap-2 rounded-xl bg-primary hover:bg-blue-500 disabled:opacity-60 text-white font-black text-xs uppercase tracking-widest px-4 py-3'>{loadingModels?<Loader2 size={16} className='animate-spin'/>:<RefreshCw size={16}/>} Fetch models</button>
-    <div><label className='block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2'>Model</label><select value={selectedModel} onChange={e=>setSelectedModel(e.target.value)} disabled={!models.length} className='w-full rounded-xl border border-white/10 bg-slate-950 text-white px-3 py-3 text-sm disabled:opacity-40'>{!models.length&&<option value=''>Fetch models first</option>}{models.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select>{models.length>0&&<p className='text-xs text-gray-500 mt-2'>{models.length} model(s) discovered.</p>}</div>
+    <div><label className='block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2'>Model</label><select value={selectedModel} onChange={e=>setSelectedModel(e.target.value)} disabled={!models.length} className='w-full rounded-xl border border-white/10 bg-slate-950 text-white px-3 py-3 text-sm disabled:opacity-40'>{!models.length&&<option value=''>Fetch models first</option>}{models.map(m=><option key={optionValue(m)} value={optionValue(m)}>{m.label}</option>)}</select>{models.length>0&&<p className='text-xs text-gray-500 mt-2'>{models.length} model(s) discovered.</p>}</div>
     <div className='rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-gray-400 flex gap-2'><TriangleAlert size={16} className='text-amber-300 shrink-0 mt-0.5'/><p>Provider catalogues may not confirm tool-call support. If a model rejects tools, choose another instruction/chat model.</p></div>
    </aside>
    <div className='glass-panel border border-white/10 rounded-3xl overflow-hidden flex flex-col min-h-[620px]'>
