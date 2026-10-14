@@ -60,7 +60,7 @@ function parseChat(req:Request):{provider:CloudProvider;apiKey:string;model:stri
 async function runOpenAI(provider:'nvidia'|'openai',apiKey:string,model:string,history:ChatMessage[]){
  const messages:any[]=[{role:'system',content:systemPrompt},...history],toolsUsed:string[]=[];
  for(let round=0;round<=3;round++){
-  const payload=await providerJSON(providers[provider].chat,{method:'POST',headers:authHeaders(provider,apiKey),body:JSON.stringify({model,messages,tools:openAITools(),tool_choice:'auto',max_tokens:1200})});
+  const payload=await providerJSON(providers[provider].chat,{method:'POST',headers:authHeaders(provider,apiKey),body:JSON.stringify({model,messages,tools:openAITools(),tool_choice:'auto',...(provider==='openai'?{max_completion_tokens:1200}:{max_tokens:1200})})});
   const assistant=payload?.choices?.[0]?.message;if(!assistant)throw new ProviderError(502);
   const calls=Array.isArray(assistant.tool_calls)?assistant.tool_calls:[];
   if(!calls.length){const content=typeof assistant.content==='string'?assistant.content:Array.isArray(assistant.content)?assistant.content.map((p:any)=>p?.text||'').join(''):'';return {content,toolsUsed};}
