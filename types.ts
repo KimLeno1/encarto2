@@ -130,6 +130,7 @@ export interface HallOfFameEntry {
 
 export const PanelType = {
   MAIN: 'MAIN',
+  AI_STUDIO: 'AI_STUDIO',
   ADMIN: 'ADMIN',
   SYSTEM_ADMIN: 'SYSTEM_ADMIN',
   STORE: 'STORE',

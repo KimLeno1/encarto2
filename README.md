@@ -2,6 +2,15 @@
 
 Encarto is a high-performance multi-game platform featuring **Encarto Arena** (real-time 2D multiplayer PvP with Socket.IO matchmaking and bot fallback), persistent player progression (XP, levels, rank tiers, match history), and a secure administration dashboard with full audit logging.
 
+## Desktop installers
+
+The GitHub Actions workflow **Build Encarto desktop installers** builds Windows (NSIS `.exe`), macOS (`.dmg`), and Debian/Ubuntu Linux (`.deb`) packages.
+
+- Run the workflow manually from the repository's **Actions** tab to download platform-specific artifacts.
+- Push a version tag such as `v1.0.0` to publish a GitHub Release containing the installers.
+- The desktop app currently opens `https://encarto.vercel.app`; it is a desktop wrapper, not an offline copy. An internet connection and the hosted service are required, while API, database, and multiplayer services remain hosted.
+- External HTTPS links open in the system browser. The desktop window disables Node integration and enables context isolation and Chromium sandboxing.
+
 ## Tech Stack
 - **Frontend**: React 19, Vite, Tailwind CSS, Lucide Icons, Socket.IO Client, Phaser.
 - **Backend**: Node.js, Express 5, TypeScript, Socket.IO.
