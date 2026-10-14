@@ -20,7 +20,7 @@ const getKey=(req:Request)=>typeof req.body?.apiKey==='string'?req.body.apiKey.t
 const chatModelId=(id:string)=>!/embedding|rerank|whisper|transcri|moderation|dall-e|text-to-speech|\btts\b|realtime-preview-audio|image-generation/i.test(id);
 async function providerJSON(url:string,init:RequestInit):Promise<any>{
  let response:globalThis.Response;
- try{response=await fetch(url,{...init,signal:AbortSignal.timeout(40000)});}catch(e){if(e instanceof Error&&['TimeoutError','AbortError'].includes(e.name))throw e;throw new ProviderError(502);}
+ try{response=await fetch(url,{...init,signal:AbortSignal.timeout(14000)});}catch(e){if(e instanceof Error&&['TimeoutError','AbortError'].includes(e.name))throw e;throw new ProviderError(502);}
  if(!response.ok)throw new ProviderError(response.status);
  return response.json();
 }
