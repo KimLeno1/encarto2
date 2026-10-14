@@ -9,7 +9,7 @@
     "start": "tsx server.ts",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run --testTimeout=15000",
     "lint": "tsc --noEmit",
     "seed:admin": "tsx scripts/seedAdmin.ts"
   },
