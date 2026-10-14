@@ -34,16 +34,18 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - name: Install dependencies (including platform-specific optional packages)
+      - name: Install dependencies
         run: npm install --include=optional --no-audit --no-fund
+      - name: Repair missing native Rollup optional package
+        run: node -e "const v=require('rollup/package.json').version; const p={'win32':'@rollup/rollup-win32-x64-msvc','darwin':'@rollup/rollup-darwin-arm64','linux':'@rollup/rollup-linux-x64-gnu'}[process.platform]; if(!p) throw new Error('Unsupported runner: '+process.platform); require('child_process').execSync('npm install --no-save --include=optional '+p+'@'+v+' --no-audit --no-fund',{stdio:'inherit'});"
       - name: Verify native Rollup package
-        run: npm ls rollup
+        run: node -e "const p={'win32':'@rollup/rollup-win32-x64-msvc','darwin':'@rollup/rollup-darwin-arm64','linux':'@rollup/rollup-linux-x64-gnu'}[process.platform]; console.log(require.resolve(p));"
       - name: Generate Prisma client
         run: npx prisma generate
       - name: Run tests
