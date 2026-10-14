@@ -33,7 +33,8 @@ import {
   Info,
   ShieldCheck,
   CalendarDays,
-  Medal
+  Medal,
+  Bot
 } from 'lucide-react';
 import { PlayerProfile, PanelType, AnimeTheme, Team, Notification, ShopItem, Ticket, Tournament } from './types.ts';
 import { INITIAL_PROFILE, MOCK_TEAMS, MOCK_NOTIFICATIONS, MOCK_TICKETS, MOCK_ORDERS, UPCOMING_TOURNAMENTS, SHOP_ITEMS, MOCK_STREAMS, BLOG_POSTS, MATCH_FIXTURES, MOCK_HALL_OF_FAME } from './mockData.ts';
@@ -58,6 +59,7 @@ import LandingPanel from './LandingPanel.tsx';
 import SystemAdminPanel from './admin/SystemAdminPanel.tsx';
 import { api } from './apiClient.ts';
 import { EncartoArena } from './game/EncartoArena.tsx';
+import AIStudioPanel from './AIStudioPanel.tsx';
 
 const DEFAULT_PLACEHOLDER_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=EncartoVeteran';
 
@@ -482,7 +484,7 @@ const App: React.FC = () => {
     );
   }
 
-  const morePanels: PanelType[] = [PanelType.TOURNAMENTS, PanelType.FIXTURES, PanelType.STREAMING, PanelType.BLOG, PanelType.STORE, PanelType.TICKETS, PanelType.ORDERS, PanelType.TEAMS, PanelType.NOTIFICATIONS, PanelType.HALL_OF_FAME, PanelType.CHAT, PanelType.PVP, PanelType.ABOUT, PanelType.ORGANIZER, PanelType.SYSTEM_ADMIN];
+  const morePanels: PanelType[] = [PanelType.AI_STUDIO, PanelType.TOURNAMENTS, PanelType.FIXTURES, PanelType.STREAMING, PanelType.BLOG, PanelType.STORE, PanelType.TICKETS, PanelType.ORDERS, PanelType.TEAMS, PanelType.NOTIFICATIONS, PanelType.HALL_OF_FAME, PanelType.CHAT, PanelType.PVP, PanelType.ABOUT, PanelType.ORGANIZER, PanelType.SYSTEM_ADMIN];
   const isMoreActive = morePanels.includes(activePanel);
   const myTeam = profile.teamId ? teams.find(t => t.id === profile.teamId) || null : null;
   const hasOrganizerRole = profile.ownedItems.includes('role-organizer');
@@ -588,6 +590,7 @@ const App: React.FC = () => {
           <HallOfFamePanel />
         )}
         {activePanel === PanelType.CHAT && <ChatPanel profile={profile} myTeam={myTeam} />}
+        {activePanel === PanelType.AI_STUDIO && <AIStudioPanel />}
         {activePanel === PanelType.PVP && <PvPPanel profile={profile} />}
         {activePanel === PanelType.ARENA && (
           <EncartoArena
@@ -641,6 +644,7 @@ const App: React.FC = () => {
               <MoreMenuItem icon={<Bell />} label="Comms" active={activePanel === PanelType.NOTIFICATIONS} onClick={() => { setActivePanel(PanelType.NOTIFICATIONS); setShowHeaderNotifications(false); setShowMoreMenu(false); }} />
               <div className="mx-6 my-2 border-t border-white/[.06]" />
               <div className="px-8 pt-2 pb-1 text-[9px] font-black uppercase tracking-[0.25em] text-fuchsia-200/80">Platform</div>
+              <MoreMenuItem icon={<Bot />} label="AI Studio" active={activePanel === PanelType.AI_STUDIO} onClick={() => { setActivePanel(PanelType.AI_STUDIO); setShowMoreMenu(false); }} />
               {hasOrganizerRole && <MoreMenuItem icon={<ShieldCheck />} label="Host Console" active={activePanel === PanelType.ORGANIZER} onClick={() => { setActivePanel(PanelType.ORGANIZER); setShowMoreMenu(false); }} />}
             </div>
           )}
