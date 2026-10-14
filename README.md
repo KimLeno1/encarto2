@@ -91,3 +91,15 @@ This repository's build script runs `vite build`, while `server.ts` starts a per
    - Account inspection, suspension/reactivation, role management.
    - Game availability configuration, bot difficulty parameters, progression rules.
    - Real-time system health and audit log inspection.
+
+## AI Studio providers
+
+AI Studio is under **More → AI Studio** after signing in. It fetches model IDs for NVIDIA NIM, OpenAI's API, Anthropic Claude, local Ollama, and a local Hermes Agent API server.
+
+- Cloud API keys stay in the open panel's React memory for the current session and are sent to the authenticated Encarto API over HTTPS. They are not written to browser storage; re-enter them after refresh.
+- Gemini encyclopedia, image, and speech requests use authenticated server routes and the optional `GEMINI_API_KEY` environment variable. Vite no longer embeds the key in client JavaScript.
+- Provider model catalogues do not consistently report tool-call support; Encarto exposes read-only allowlisted tools for cloud providers and Ollama. Choose another model if the selected one rejects tools.
+- Ollama must run locally and its CORS/origin settings must allow the actual Encarto origin. In the hosted web app, localhost is the user's computer, not Vercel.
+- Hermes Agent must be installed/configured separately. Set `API_SERVER_ENABLED=true`, a strong `API_SERVER_KEY`, a narrow `API_SERVER_CORS_ORIGINS` allowlist, then run `hermes gateway`. Hermes uses its own configured model and native tools (which may include terminal/file access), so treat the connection as privileged.
+
+The Electron installer remains an online wrapper around the hosted Encarto app and does not bundle model weights or provider credentials.
