@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import { env } from './config/env.ts';
 import { checkDatabaseConnection, prisma } from './db/client.ts';
 import { authRouter } from './routes/authRoutes.ts';
+import { aiRouter } from './routes/aiRoutes.ts';
 import { errorHandler } from './middlewares/errorHandler.ts';
 
 export const app = express();
@@ -106,6 +107,9 @@ app.use('/api/progression', progressionRouter);
 // Admin Control Panel API
 import { adminRouter } from './routes/adminRoutes.ts';
 app.use('/api/admin', adminRouter);
+
+// Authenticated AI provider and Gemini proxy APIs; provider keys never enter the frontend bundle.
+app.use('/api/ai', aiRouter);
 
 // Centralized error handler
 app.use(errorHandler);
