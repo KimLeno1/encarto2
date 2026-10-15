@@ -1,8 +1,27 @@
-
 import React, { useState } from 'react';
-// Corrected non-existent ShieldInfo to Shield
-import { Trophy, Calendar, Users, Star, ArrowRight, CheckCircle2, QrCode, X, Info, Shield, UserPlus, Clock } from 'lucide-react';
-import { Tournament, Ticket, PlayerProfile } from './types';
+import { 
+  Trophy, 
+  Calendar, 
+  Users, 
+  ArrowRight, 
+  CheckCircle2, 
+  QrCode, 
+  X, 
+  Info, 
+  Shield, 
+  UserPlus, 
+  Clock, 
+  Search, 
+  Zap, 
+  Sparkles,
+  Layers,
+  ChevronRight,
+  Flame,
+  Swords
+} from 'lucide-react';
+import { Tournament, Ticket, PlayerProfile } from './types.ts';
+import { GlowingPrizePool } from './GlowingPrizePool.tsx';
+import { TournamentBracketView } from './TournamentBracketView.tsx';
 
 interface TournamentsPanelProps {
   tournaments: Tournament[];
@@ -11,15 +30,17 @@ interface TournamentsPanelProps {
   profile: PlayerProfile;
 }
 
-const TournamentsPanel: React.FC<TournamentsPanelProps> = ({ tournaments, onRegister, tickets, profile }) => {
+export const TournamentsPanel: React.FC<TournamentsPanelProps> = ({ tournaments, onRegister, tickets, profile }) => {
   const [successTicket, setSuccessTicket] = useState<Ticket | null>(null);
   const [viewingTournament, setViewingTournament] = useState<Tournament | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'upcoming' | 'enrolled'>('all');
+  const [activeTab, setActiveTab] = useState<'tournaments' | 'bracket'>('tournaments');
 
   const handleRegister = (t: Tournament) => {
     const ticket = onRegister(t);
     if (ticket) {
       setSuccessTicket(ticket);
-      // Update viewing modal if open
       if (viewingTournament?.id === t.id) {
         setViewingTournament({
           ...t,
@@ -33,227 +54,355 @@ const TournamentsPanel: React.FC<TournamentsPanelProps> = ({ tournaments, onRegi
     return tickets.some(ticket => ticket.tournamentName === tournamentName);
   };
 
+  const query = searchQuery.toLowerCase().trim();
+  const filteredTournaments = tournaments.filter(t => {
+    const matchesSearch = !query || t.name.toLowerCase().includes(query) || t.game.toLowerCase().includes(query);
+    if (!matchesSearch) return false;
+    if (filterStatus === 'active') return t.status === 'active';
+    if (filterStatus === 'upcoming') return t.status === 'upcoming';
+    if (filterStatus === 'enrolled') return isRegistered(t.name);
+    return true;
+  });
+
   return (
-    <div className="max-w-6xl mx-auto space-y-12 animate-in slide-in-from-bottom-4 duration-500 pb-12">
-      {/* Success Modal */}
+    <div className="max-w-7xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-300 pb-24 px-1 sm:px-2">
+      {/* Access Ticket Modal */}
       {successTicket && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="glass-panel w-full max-w-md rounded-[3rem] overflow-hidden border-2 border-primary shadow-2xl animate-in zoom-in-95 duration-500">
-            <div className="p-10 flex flex-col items-center text-center space-y-6">
-              <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center text-primary mb-4 animate-bounce">
-                <CheckCircle2 size={48} />
-              </div>
-              <h3 className="anime-title text-4xl text-white uppercase tracking-tight">Deployment Confirmed</h3>
-              <p className="text-gray-400 text-xs font-black uppercase tracking-[0.2em]">Your arena pass has been generated</p>
-              
-              <div className="w-full p-8 bg-white rounded-[2rem] shadow-inner mt-4">
-                <QrCode size={180} className="text-black mx-auto" />
-                <p className="mt-4 text-black font-black text-xs tracking-[0.4em] uppercase">{successTicket.id}</p>
-              </div>
-
-              <div className="space-y-2 mt-4">
-                <h4 className="text-xl font-black text-white uppercase">{successTicket.tournamentName}</h4>
-                <p className="text-primary font-black text-[10px] uppercase tracking-widest">{successTicket.date}</p>
-              </div>
-
-              <button 
-                onClick={() => setSuccessTicket(null)}
-                className="w-full py-5 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all border border-white/10"
-              >
-                CLOSE ACCESS LOG
-              </button>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-[24px] overflow-hidden border border-cyan-400/50 shadow-[0_0_50px_rgba(34,211,238,0.4)] bg-[#07051a] p-6 sm:p-8 text-center space-y-5">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white shadow-[0_0_25px_rgba(168,85,247,0.7)] animate-bounce">
+              <CheckCircle2 size={36} />
             </div>
+            <div>
+              <h3 className="font-heading text-2xl text-white uppercase tracking-tight">Arena Pass Secured</h3>
+              <p className="text-[#a5b4fc] text-xs font-medium mt-1">Your cryptographic match clearance is verified</p>
+            </div>
+            
+            <div className="p-6 bg-white rounded-2xl shadow-inner mx-auto max-w-[220px]">
+              <QrCode size={160} className="text-black mx-auto" />
+              <p className="mt-3 text-black font-black text-xs tracking-[0.3em] uppercase font-mono">{successTicket.id}</p>
+            </div>
+
+            <div className="space-y-1">
+              <h4 className="text-lg font-black text-white uppercase">{successTicket.tournamentName}</h4>
+              <p className="text-cyan-300 font-mono font-bold text-xs">{successTicket.date}</p>
+            </div>
+
+            <button 
+              onClick={() => setSuccessTicket(null)}
+              className="w-full py-3.5 rounded-xl cyber-btn text-white font-black text-xs uppercase tracking-widest cursor-pointer"
+            >
+              Confirm & Close
+            </button>
           </div>
         </div>
       )}
 
-      {/* Tournament Detail Modal */}
+      {/* Tournament Detail & Full Bracket Modal */}
       {viewingTournament && (
-        <div className="fixed inset-0 z-[900] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="glass-panel w-full max-w-4xl max-h-[85vh] rounded-[3.5rem] overflow-hidden border border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-bottom-8">
-            <header className="p-8 border-b border-white/5 flex items-center justify-between sticky top-0 bg-black/40 backdrop-blur-md z-10">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
-                  <Trophy size={24} />
+        <div className="fixed inset-0 z-[900] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-200">
+          <div className="w-full max-w-5xl max-h-[92vh] rounded-[24px] overflow-hidden border border-purple-500/40 shadow-[0_0_60px_rgba(168,85,247,0.35)] bg-[#07051a] flex flex-col">
+            <header className="p-5 sm:p-6 border-b border-purple-500/20 flex items-center justify-between shrink-0 bg-[#0b0b2b]/90">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-400/50 flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(168,85,247,0.4)]">
+                  <Trophy size={20} />
                 </div>
                 <div>
-                  <h3 className="text-3xl font-black text-white uppercase tracking-tight">{viewingTournament.name}</h3>
-                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{viewingTournament.game}</p>
+                  <h3 className="font-heading text-xl sm:text-2xl text-white uppercase tracking-tight">{viewingTournament.name}</h3>
+                  <p className="text-[10px] font-black text-cyan-300 uppercase tracking-widest">{viewingTournament.game}</p>
                 </div>
               </div>
-              <button onClick={() => setViewingTournament(null)} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-all text-gray-500 hover:text-white">
-                <X size={24} />
+              <button 
+                onClick={() => setViewingTournament(null)} 
+                className="p-2 rounded-full bg-[#0b0b2b] hover:bg-purple-900/60 text-[#a5b4fc] hover:text-white border border-purple-500/30 transition-colors cursor-pointer"
+              >
+                <X size={18} />
               </button>
             </header>
 
-            <div className="flex-grow overflow-y-auto custom-scrollbar p-10">
-              <div className="grid lg:grid-cols-12 gap-12">
-                <div className="lg:col-span-8 space-y-12">
-                  <section className="space-y-4">
-                    <h4 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] flex items-center gap-2">
-                      {/* Changed ShieldInfo to Shield */}
-                      <Shield size={14} className="text-primary" /> Rules of Engagement
-                    </h4>
-                    <div className="p-8 bg-white/5 rounded-[2rem] border border-white/5">
-                      <p className="text-gray-300 font-medium leading-relaxed whitespace-pre-line">{viewingTournament.rules}</p>
-                    </div>
-                  </section>
-
-                  <section className="space-y-4">
-                    <h4 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] flex items-center gap-2">
-                      <Users size={14} className="text-primary" /> Deployed Contenders ({viewingTournament.registeredPlayers.length}/{viewingTournament.maxPlayers})
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {viewingTournament.registeredPlayers.map((player, i) => (
-                        <div key={i} className="px-4 py-3 bg-white/5 rounded-xl border border-white/5 flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black text-primary">
-                            {player.charAt(0)}
-                          </div>
-                          <span className="text-[10px] font-black text-white uppercase truncate">{player}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                </div>
-
-                <aside className="lg:col-span-4 space-y-8">
-                  <div className="glass-panel p-8 rounded-[2.5rem] bg-gradient-to-br from-primary/10 to-transparent border border-white/5 space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex flex-col">
-                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Prize Pool</span>
-                        <span className="text-3xl font-black text-yellow-500 uppercase">{viewingTournament.prize}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Entry Fee</span>
-                        <span className="text-2xl font-black text-white uppercase">{viewingTournament.entryFee} <span className="text-xs text-primary">M3GA</span></span>
-                      </div>
-                    </div>
-                    <div className="h-px bg-white/10" />
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-black text-gray-500 uppercase">Start Date</span>
-                        <span className="text-[10px] font-black text-white uppercase">{viewingTournament.date}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-black text-gray-500 uppercase">Created On</span>
-                        <span className="text-[10px] font-black text-white uppercase">{viewingTournament.createdAt}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-black text-gray-500 uppercase">Slots Taken</span>
-                        <span className="text-[10px] font-black text-white uppercase">{viewingTournament.registeredPlayers.length} / {viewingTournament.maxPlayers}</span>
-                      </div>
-                    </div>
+            <div className="flex-grow overflow-y-auto custom-scrollbar p-5 sm:p-8 space-y-8">
+              {/* Prize Pool with count-up animation inside modal */}
+              <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-purple-950/40 to-blue-950/40 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <GlowingPrizePool 
+                  amount={viewingTournament.entryFee * 100 || 5000} 
+                  label="Verified Match Bounty"
+                  suffix="M3GA ($25,000)" 
+                />
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <span className="text-[10px] text-[#a5b4fc] font-bold uppercase block">Contenders</span>
+                    <span className="font-mono text-cyan-300 font-bold text-sm">
+                      {viewingTournament.registeredPlayers.length} / {viewingTournament.maxPlayers} Filled
+                    </span>
                   </div>
-
-                  {!isRegistered(viewingTournament.name) && (
+                  {!isRegistered(viewingTournament.name) ? (
                     <button 
                       onClick={() => handleRegister(viewingTournament)}
                       disabled={viewingTournament.registeredPlayers.length >= viewingTournament.maxPlayers}
-                      className={`w-full py-6 rounded-3xl font-black text-[12px] uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 ${
-                        viewingTournament.registeredPlayers.length >= viewingTournament.maxPlayers
-                        ? 'bg-red-500/20 text-red-500 cursor-not-allowed border border-red-500/20'
-                        : 'bg-primary text-white shadow-primary/20 hover:scale-[1.02] active:scale-95'
-                      }`}
+                      className="py-3 px-6 rounded-xl cyber-btn text-white font-black text-xs uppercase tracking-widest cursor-pointer"
                     >
-                      {viewingTournament.registeredPlayers.length >= viewingTournament.maxPlayers ? 'ARENA FULL' : (
-                        <><UserPlus size={18} /> DEPLOY NOW</>
-                      )}
+                      Enroll Now
                     </button>
+                  ) : (
+                    <div className="py-2.5 px-4 rounded-xl bg-green-950/80 border border-green-500/50 text-green-300 text-xs font-bold uppercase flex items-center gap-1.5">
+                      <CheckCircle2 size={14} /> Pass Secured
+                    </div>
                   )}
-                </aside>
+                </div>
+              </div>
+
+              {/* Tournament Knockout Bracket Component */}
+              <TournamentBracketView tournamentName={viewingTournament.name} />
+
+              {/* Rules of Engagement */}
+              <div className="p-5 rounded-2xl bg-[#0b0b2b]/70 border border-purple-500/20 space-y-2">
+                <h4 className="text-xs font-black text-purple-300 uppercase tracking-wider flex items-center gap-2">
+                  <Shield size={14} className="text-cyan-400" /> Rules & Tournament Regulations
+                </h4>
+                <p className="text-[#a5b4fc] font-medium leading-relaxed whitespace-pre-line text-xs">
+                  {viewingTournament.rules}
+                </p>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h2 className="anime-title text-5xl text-white uppercase tracking-tight">The Pro Arena</h2>
-          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Global tournaments and season qualifiers</p>
-        </div>
-        <div className="flex gap-4">
-          <div className="px-6 py-3 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-3">
-            <Trophy className="text-yellow-500" size={18} />
-            <span className="text-[10px] font-black text-white uppercase tracking-widest">{tournaments.length} Active Seasons</span>
+      {/* Hero Banner with Large Glowing Prize Pool & View Switcher */}
+      <div className="cyber-card p-6 sm:p-8 rounded-[24px] relative overflow-hidden">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div className="space-y-4 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-purple-950/80 border border-purple-500/40 text-[10px] font-black uppercase tracking-widest text-purple-200 flex items-center gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.4)]">
+                <Sparkles size={12} className="text-cyan-300" /> PRO LEAGUE CIRCUIT
+              </span>
+              <span className="text-[10px] font-mono text-cyan-300/90 uppercase tracking-widest">Season 5 Playoffs</span>
+            </div>
+
+            <h1 className="font-heading text-3xl sm:text-5xl text-white uppercase tracking-tight">
+              CYBER <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-300 to-cyan-300 text-glow-purple">TOURNAMENTS</span>
+            </h1>
+
+            <p className="text-sm text-[#a5b4fc] font-normal leading-relaxed">
+              Enter official sanctioned brackets, track live match node advancements with glowing drawing paths, and secure your arena pass to the grand championship.
+            </p>
+
+            {/* TAB VIEW SWITCHER: Tournament Cards vs Knockout Bracket */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('tournaments')}
+                className={`py-2.5 px-5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'tournaments'
+                    ? 'cyber-btn shadow-[0_0_20px_rgba(168,85,247,0.5)] text-white'
+                    : 'bg-[#0b0b2b]/70 border border-purple-500/25 text-[#a5b4fc] hover:text-white'
+                }`}
+              >
+                <Layers size={14} />
+                <span>Tournament Cards</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('bracket')}
+                className={`py-2.5 px-5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'bracket'
+                    ? 'cyber-btn shadow-[0_0_20px_rgba(168,85,247,0.5)] text-white'
+                    : 'bg-[#0b0b2b]/70 border border-purple-500/25 text-[#a5b4fc] hover:text-white'
+                }`}
+              >
+                <Swords size={14} />
+                <span>Live Bracket Tree</span>
+              </button>
+            </div>
+          </div>
+
+          {/* LARGE GLOWING PRIZE POOL (Count-up with IntersectionObserver) */}
+          <div className="p-6 rounded-2xl bg-[#07051a]/90 border border-purple-500/40 shadow-[0_0_35px_rgba(168,85,247,0.25)] min-w-[280px]">
+            <GlowingPrizePool 
+              amount={125000} 
+              prefix=""
+              suffix="M3GA" 
+              label="Active Season Total Prize Pool" 
+            />
+            <div className="pt-3 mt-3 border-t border-purple-500/20 flex items-center justify-between text-xs text-[#a5b4fc]">
+              <span className="font-mono">Est. USD: $625,000</span>
+              <span className="text-green-400 font-bold uppercase flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-400 live-dot-pulse" /> 4 Cups Active
+              </span>
+            </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        {tournaments.map(t => {
-          const registered = isRegistered(t.name);
-          const slotsTaken = t.registeredPlayers.length;
-          const isFull = slotsTaken >= t.maxPlayers;
-          
-          return (
-            <div key={t.id} className={`glass-panel rounded-[2.5rem] border overflow-hidden group transition-all duration-500 flex flex-col ${registered ? 'border-green-500/40 bg-green-500/5' : 'border-white/5 hover:border-primary/40'}`}>
-              <div className="p-8 space-y-6">
-                <div className="flex justify-between items-start">
-                  <div className="flex gap-2">
-                    <span className="px-3 py-1 bg-primary/20 text-primary text-[8px] font-black rounded uppercase tracking-widest">{t.game}</span>
-                    <span className="px-3 py-1 bg-white/5 text-gray-500 text-[8px] font-black rounded uppercase tracking-widest flex items-center gap-1">
-                      <Clock size={10} /> {t.date}
-                    </span>
-                  </div>
-                  <div className={`px-3 py-1 rounded text-[8px] font-black uppercase tracking-widest ${registered ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                    {registered ? 'ENROLLED' : (isFull ? 'CAPACITY REACHED' : t.status)}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black text-white uppercase leading-none mb-4 group-hover:text-primary transition-colors cursor-pointer" onClick={() => setViewingTournament(t)}>{t.name}</h3>
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-[8px] font-black text-gray-600 uppercase tracking-widest">
-                        <span>Contenders</span>
-                        <span>{slotsTaken} / {t.maxPlayers}</span>
+      {/* TAB CONTENT 1: KNOCKOUT BRACKET VIEW */}
+      {activeTab === 'bracket' && (
+        <div className="cyber-card p-5 sm:p-8 rounded-[24px] space-y-6 animate-in fade-in duration-200">
+          <TournamentBracketView />
+        </div>
+      )}
+
+      {/* TAB CONTENT 2: TOURNAMENTS GRID */}
+      {activeTab === 'tournaments' && (
+        <div className="space-y-6">
+          {/* Filter Bar & Search */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
+              {[
+                { id: 'all', label: 'All Tournaments' },
+                { id: 'active', label: 'Live Now 🔴' },
+                { id: 'upcoming', label: 'Upcoming' },
+                { id: 'enrolled', label: `My Passes (${tickets.length})` }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setFilterStatus(f.id as any)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                    filterStatus === f.id
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white border border-purple-300 shadow-[0_0_16px_rgba(168,85,247,0.5)]'
+                      : 'bg-[#0b0b2b]/70 text-[#a5b4fc] hover:text-white hover:bg-purple-950/50 border border-purple-500/20'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative min-w-[220px]">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+              <input
+                type="text"
+                placeholder="Search tournaments..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#0b0b2b]/80 border border-purple-500/30 rounded-xl py-2 pl-10 pr-4 text-xs text-white placeholder-purple-400/50 focus:border-purple-300 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Tournaments Grid Cards */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTournaments.map(t => {
+              const registered = isRegistered(t.name);
+              const slotsTaken = t.registeredPlayers.length;
+              const isFull = slotsTaken >= t.maxPlayers;
+              const capacityPercent = Math.min(Math.round((slotsTaken / t.maxPlayers) * 100), 100);
+
+              return (
+                <div 
+                  key={t.id} 
+                  className={`arena-card-hover rounded-[20px] border overflow-hidden flex flex-col group bg-[#0b0b2b]/90 backdrop-blur-sm ${
+                    registered 
+                      ? 'border-green-500/40 shadow-[0_0_24px_rgba(34,197,94,0.15)]' 
+                      : t.status === 'active'
+                      ? 'border-cyan-400/50 shadow-[0_0_24px_rgba(34,211,238,0.25)]'
+                      : 'border-purple-500/30 hover:border-purple-400/60'
+                  }`}
+                >
+                  {/* Card Banner Cover */}
+                  <div className="relative h-44 w-full overflow-hidden bg-black/60">
+                    <img 
+                      src={t.banner || '/src/assets/images/cyber_neon_arena_1792040308858.jpg'} 
+                      alt={t.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b2b] via-[#0b0b2b]/40 to-transparent" />
+
+                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest backdrop-blur-md border ${
+                        t.status === 'active'
+                          ? 'bg-rose-950/90 text-rose-300 border-rose-500/50 shadow-[0_0_12px_rgba(244,63,94,0.5)] flex items-center gap-1.5'
+                          : registered
+                          ? 'bg-green-950/90 text-green-300 border-green-500/40'
+                          : 'bg-black/70 text-purple-300 border-purple-500/30'
+                      }`}>
+                        {t.status === 'active' && <span className="w-2 h-2 rounded-full bg-rose-500 live-dot-pulse" />}
+                        {t.status === 'active' ? 'LIVE NOW' : registered ? 'PASS SECURED ✓' : t.status.toUpperCase()}
+                      </span>
+
+                      <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-black/70 text-cyan-300 border border-purple-500/40">
+                        {t.game}
+                      </span>
+                    </div>
+
+                    <div className="absolute bottom-2.5 left-3.5 right-3.5 flex items-end justify-between">
+                      <div>
+                        <p className="text-[9px] font-bold text-[#a5b4fc] uppercase">Prize Bounty</p>
+                        <p className="text-xl font-heading text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-cyan-300 font-bold">
+                          {t.prize}
+                        </p>
                       </div>
-                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                      <span className="text-[10px] font-mono text-[#a5b4fc] bg-black/70 px-2 py-0.5 rounded-md border border-purple-500/30">
+                        Fee: {t.entryFee} M3GA
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-5 flex flex-col flex-grow space-y-4">
+                    <div>
+                      <h4 
+                        onClick={() => setViewingTournament(t)}
+                        className="font-heading text-lg text-white uppercase tracking-tight group-hover:text-cyan-300 transition-colors cursor-pointer"
+                      >
+                        {t.name}
+                      </h4>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#a5b4fc] mt-1">
+                        <Clock size={12} className="text-cyan-400" />
+                        <span>{t.date}</span>
+                      </div>
+                    </div>
+
+                    {/* Contenders Progress Bar */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px] font-extrabold uppercase">
+                        <span className="text-[#a5b4fc]">Contenders</span>
+                        <span className="text-cyan-300 font-mono">{slotsTaken} / {t.maxPlayers} ({capacityPercent}%)</span>
+                      </div>
+                      <div className="w-full h-2 bg-[#07051a] rounded-full overflow-hidden border border-purple-500/20">
                         <div 
-                          className={`h-full transition-all duration-1000 ${isFull ? 'bg-red-500 shadow-[0_0_10px_#ef4444]' : 'bg-primary shadow-[0_0_10px_#3b82f6]'}`} 
-                          style={{ width: `${(slotsTaken / t.maxPlayers) * 100}%` }} 
+                          className="h-full rounded-full bg-gradient-to-r from-purple-600 to-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)] transition-all duration-500"
+                          style={{ width: `${capacityPercent}%` }}
                         />
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[8px] font-black text-gray-600 uppercase mb-1">Prize Reward</p>
-                      <p className="text-xl font-black text-yellow-500 uppercase">{t.prize}</p>
+
+                    {/* Action Buttons */}
+                    <div className="pt-2 mt-auto grid grid-cols-2 gap-2.5">
+                      <button
+                        onClick={() => setViewingTournament(t)}
+                        className="py-2.5 bg-[#07051a] hover:bg-purple-950/60 text-[#a5b4fc] hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider border border-purple-500/30 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <Swords size={12} className="text-cyan-300" /> Bracket & Rules
+                      </button>
+
+                      <button
+                        onClick={() => handleRegister(t)}
+                        disabled={registered || isFull}
+                        className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          registered
+                            ? 'bg-green-950/80 border border-green-500/40 text-green-300 cursor-default'
+                            : isFull
+                            ? 'bg-rose-950/40 border border-rose-500/30 text-rose-400 cursor-not-allowed opacity-60'
+                            : 'cyber-btn text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                        }`}
+                      >
+                        {registered ? (
+                          <>Pass Secured <CheckCircle2 size={12} /></>
+                        ) : isFull ? (
+                          <>Arena Full</>
+                        ) : (
+                          <>Register <Zap size={12} className="text-cyan-200" /></>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex border-t border-white/5">
-                <button 
-                  onClick={() => setViewingTournament(t)}
-                  className="flex-1 py-6 bg-white/5 hover:bg-white/10 text-white font-black text-[12px] uppercase tracking-[0.2em] border-r border-white/5 transition-all flex items-center justify-center gap-2"
-                >
-                  <Info size={16} /> DETAILS
-                </button>
-                <button 
-                  onClick={() => handleRegister(t)}
-                  disabled={registered || isFull}
-                  className={`flex-[2] py-6 transition-all font-black text-[12px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 ${
-                    registered 
-                      ? 'bg-green-500 text-white cursor-default' 
-                      : isFull
-                      ? 'bg-red-500/10 text-red-500 cursor-not-allowed opacity-50'
-                      : 'bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white'
-                  }`}
-                >
-                  {registered ? (
-                    <>REGISTERED <CheckCircle2 size={16} /></>
-                  ) : isFull ? (
-                    <>ARENA FULL <X size={16} /></>
-                  ) : (
-                    <>REGISTER NOW <ArrowRight size={16} /></>
-                  )}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

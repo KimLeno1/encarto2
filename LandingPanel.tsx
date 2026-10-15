@@ -9,9 +9,10 @@ import { LogoComponent } from './components.tsx';
 interface LandingPanelProps {
   onEnter: () => void;
   onAdminAccess: () => void;
+  onDemoLogin?: (role?: 'player' | 'admin') => void;
 }
 
-const LandingPanel: React.FC<LandingPanelProps> = ({ onEnter, onAdminAccess }) => {
+const LandingPanel: React.FC<LandingPanelProps> = ({ onEnter, onAdminAccess, onDemoLogin }) => {
   const [secretCounter, setSecretCounter] = useState(0);
   const featuredTournament = UPCOMING_TOURNAMENTS[0];
   const pulseCards = [
@@ -34,9 +35,18 @@ const LandingPanel: React.FC<LandingPanelProps> = ({ onEnter, onAdminAccess }) =
             <a href="#tournaments" className="transition hover:text-white">Tournaments</a>
             <a href="#community" className="transition hover:text-white">Community</a>
           </nav>
-          <button onClick={onEnter} className="inline-flex items-center gap-2 rounded-xl border border-violet-300/30 bg-violet-400/10 px-4 py-2.5 text-sm font-bold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20">
-            Sign in <ArrowUpRight size={16} />
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button 
+              onClick={() => onDemoLogin ? onDemoLogin('player') : onEnter()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/40 bg-cyan-950/60 px-3.5 py-2 text-xs font-black text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition hover:border-cyan-300 hover:bg-cyan-900/60 hover:text-white"
+            >
+              <Zap size={14} className="fill-cyan-400 text-cyan-400" />
+              <span>Demo Login</span>
+            </button>
+            <button onClick={onEnter} className="inline-flex items-center gap-2 rounded-xl border border-violet-300/30 bg-violet-400/10 px-4 py-2 text-sm font-bold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20">
+              Sign in <ArrowUpRight size={16} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -59,6 +69,13 @@ const LandingPanel: React.FC<LandingPanelProps> = ({ onEnter, onAdminAccess }) =
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <button onClick={onEnter} className="group inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-7 py-4 text-sm font-extrabold tracking-wide text-white shadow-[0_10px_40px_rgba(109,40,217,.28)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_46px_rgba(56,189,248,.2)]">
                 ENTER THE ARENA <ArrowRight size={18} className="transition group-hover:translate-x-1" />
+              </button>
+              <button 
+                onClick={() => onDemoLogin ? onDemoLogin('player') : onEnter()}
+                className="inline-flex min-h-14 items-center justify-center gap-2.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-6 py-4 text-sm font-extrabold text-cyan-200 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition hover:-translate-y-0.5 hover:bg-cyan-900/60 hover:text-white hover:border-cyan-300"
+              >
+                <Zap size={18} className="text-cyan-300 fill-cyan-400 animate-pulse" />
+                <span>QUICK DEMO LOGIN</span>
               </button>
               <a href="#discover" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-7 py-4 text-sm font-bold text-slate-200 transition hover:border-violet-300/30 hover:bg-white/[0.07]">
                 Explore Encarto <ArrowUpRight size={17} />

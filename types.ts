@@ -54,6 +54,17 @@ export interface Badge {
   unlocked: boolean;
 }
 
+export interface TournamentBracketMatch {
+  id: string;
+  round: 'Quarterfinals' | 'Semifinals' | 'Grand Finals';
+  teamA: string;
+  scoreA?: number;
+  teamB: string;
+  scoreB?: number;
+  winner?: string;
+  status: 'live' | 'upcoming' | 'completed';
+}
+
 export interface Tournament {
   id: string;
   name: string;
@@ -67,6 +78,37 @@ export interface Tournament {
   registeredPlayers: string[];
   rules: string;
   createdAt: string;
+  banner?: string;
+  bracket?: TournamentBracketMatch[];
+  isFeatured?: boolean;
+}
+
+export interface GameCardItem {
+  id: string;
+  name: string;
+  genre: string;
+  badge?: string;
+  rating: number;
+  playersCount: string;
+  tournamentsCount: number;
+  image: string;
+  description: string;
+  playableType: 'arena' | 'chess' | 'checkers' | 'racing' | 'bike' | 'scrim';
+  modes: string[];
+  difficulty: 'Casual' | 'Pro' | 'Expert' | 'Extreme';
+  isHot?: boolean;
+}
+
+export interface DailyQuest {
+  id: string;
+  title: string;
+  reward: number;
+  xp: number;
+  progress: number;
+  maxProgress: number;
+  completed: boolean;
+  claimed: boolean;
+  category: 'duels' | 'tournaments' | 'arena' | 'social';
 }
 
 export interface Fixture {

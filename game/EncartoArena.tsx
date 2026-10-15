@@ -30,14 +30,25 @@ import {
 import { BotDifficulty } from './ai/botConfig.ts';
 import { EncartoArenaOnline } from './EncartoArenaOnline.tsx';
 import { api } from '../apiClient.ts';
+import { MatchVictoryModal } from '../MatchVictoryModal.tsx';
 
 interface EncartoArenaProps {
   onBackToHub: () => void;
   playerName?: string;
   initialOnline?: boolean;
+  initialMode?: GameMode;
+  initialDifficulty?: BotDifficulty;
+  initialBotCount?: number;
 }
 
-export const EncartoArena: React.FC<EncartoArenaProps> = ({ onBackToHub, playerName = 'Pilot', initialOnline = false }) => {
+export const EncartoArena: React.FC<EncartoArenaProps> = ({ 
+  onBackToHub, 
+  playerName = 'Pilot', 
+  initialOnline = false,
+  initialMode = 'BOT_DUEL',
+  initialDifficulty = 'NORMAL',
+  initialBotCount = 1
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<EncartoArenaGame | null>(null);
 
@@ -45,14 +56,14 @@ export const EncartoArena: React.FC<EncartoArenaProps> = ({ onBackToHub, playerN
   const [isOnlinePvP, setIsOnlinePvP] = useState(initialOnline);
 
   // Selected game setup
-  const [selectedMode, setSelectedMode] = useState<GameMode>('BOT_DUEL');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>('NORMAL');
-  const [selectedBotCount, setSelectedBotCount] = useState<number>(1);
+  const [selectedMode, setSelectedMode] = useState<GameMode>(initialMode);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>(initialDifficulty);
+  const [selectedBotCount, setSelectedBotCount] = useState<number>(initialBotCount);
 
   const [hud, setHud] = useState<PlayerHUDState>({
-    mode: 'BOT_DUEL',
-    difficulty: 'NORMAL',
-    botCount: 1,
+    mode: initialMode,
+    difficulty: initialDifficulty,
+    botCount: initialBotCount,
     health: DEFAULT_ARENA_CONFIG.playerMaxHealth,
     maxHealth: DEFAULT_ARENA_CONFIG.playerMaxHealth,
     dummyHealth: DEFAULT_ARENA_CONFIG.dummyMaxHealth,
@@ -88,7 +99,7 @@ export const EncartoArena: React.FC<EncartoArenaProps> = ({ onBackToHub, playerN
 
   // Authoritatively submit completed bot practice match for verified XP progression
   useEffect(() => {
-    if (hud.status !== 'PLAYING' && selectedMode !== 'PRACTICE_DUMMY' && !hasSubmittedRef.current) {
+    if ((hud.status === 'VICTORY' || hud.status === 'DEFEAT' || hud.status === 'DRAW') && selectedMode !== 'PRACTICE_DUMMY' && !hasSubmittedRef.current) {
       hasSubmittedRef.current = true;
       setIsSubmittingMatch(true);
       api.completeBotMatch({
@@ -611,46 +622,59 @@ export const EncartoArena: React.FC<EncartoArenaProps> = ({ onBackToHub, playerN
         </div>
 
         {/* Match Completed Modal (Victory / Defeat / Draw) */}
-        {hud.status !== 'PLAYING' && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 z-20 animate-in fade-in">
-            <div className="max-w-md w-full glass-panel p-8 rounded-3xl border-2 border-primary/40 text-center space-y-6 shadow-2xl">
+        {hud.status === 'VICTORY' && (
+          <MatchVictoryModal
+            isOpen={true}
+            onClose={onBackToHub}
+            onRematch={() => handleRestart()}
+            gameTitle="Encarto Mecha Strike"
+            score={hud.stats.score}
+            xpEarned={selectedDifficulty === 'HARD' ? 250 : selectedDifficulty === 'NORMAL' ? 150 : 80}
+            coinsEarned={selectedDifficulty === 'HARD' ? 50 : 25}
+            botsNeutralized={hud.stats.botsDefeated}
+            damageDealt={hud.stats.damageDealt}
+            modeLabel={selectedMode === 'PRACTICE_DUMMY' ? 'Target Dummy Practice' : `${selectedDifficulty} Bot Duel`}
+          />
+        )}
+
+        {(hud.status === 'DEFEAT' || hud.status === 'DRAW') && (
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 z-20 animate-fade-in">
+            <div className="max-w-md w-full bg-[#0b0b2b]/95 p-8 rounded-3xl border border-rose-500/40 text-center space-y-6 shadow-[0_0_40px_rgba(244,63,94,0.35)] animate-pop-in">
               <div className={`w-20 h-20 rounded-3xl mx-auto flex items-center justify-center border-2 shadow-2xl ${
-                hud.status === 'VICTORY'
-                  ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400 shadow-yellow-500/30'
-                  : hud.status === 'DEFEAT'
-                  ? 'bg-red-500/20 border-red-500 text-red-400 shadow-red-500/30'
-                  : 'bg-primary/20 border-primary text-primary shadow-primary/30'
+                hud.status === 'DEFEAT'
+                  ? 'bg-rose-500/20 border-rose-500 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.5)]'
+                  : 'bg-purple-500/20 border-purple-500 text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.5)]'
               }`}>
-                {hud.status === 'VICTORY' ? <Trophy size={40} /> : hud.status === 'DEFEAT' ? <Skull size={40} /> : <Award size={40} />}
+                {hud.status === 'DEFEAT' ? <Skull size={40} /> : <Award size={40} />}
               </div>
 
               <div>
-                <h3 className={`anime-title text-4xl uppercase tracking-wider ${
-                  hud.status === 'VICTORY' ? 'text-yellow-400' : hud.status === 'DEFEAT' ? 'text-red-400' : 'text-white'
+                <h3 className={`font-heading text-4xl uppercase tracking-wider ${
+                  hud.status === 'DEFEAT' ? 'text-rose-400' : 'text-purple-200'
                 }`}>
-                  {hud.status === 'VICTORY' ? 'Victory Achieved' : hud.status === 'DEFEAT' ? 'Defeat' : 'Draw'}
+                  {hud.status === 'DEFEAT' ? 'DEFEAT' : 'STALEMATE DRAW'}
                 </h3>
-                <p className="text-xs font-black uppercase text-primary tracking-widest mt-1">
+                <p className="text-xs font-black uppercase text-purple-300 tracking-widest mt-1">
                   {selectedMode === 'PRACTICE_DUMMY' ? 'Target Session Concluded' : `${selectedDifficulty} AI Battle Evaluation`}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-left">
-                <div className="p-3.5 bg-white/5 rounded-2xl border border-white/5">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Total Score</span>
+                <div className="p-3.5 bg-purple-950/40 rounded-2xl border border-purple-500/20">
+                  <span className="text-[10px] text-purple-300/70 font-bold uppercase block">Total Score</span>
                   <span className="text-lg font-black text-white font-mono">{hud.stats.score}</span>
                 </div>
-                <div className="p-3.5 bg-white/5 rounded-2xl border border-white/5">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Damage Dealt</span>
+                <div className="p-3.5 bg-purple-950/40 rounded-2xl border border-purple-500/20">
+                  <span className="text-[10px] text-purple-300/70 font-bold uppercase block">Damage Dealt</span>
                   <span className="text-lg font-black text-cyan-400 font-mono">{hud.stats.damageDealt}</span>
                 </div>
-                <div className="p-3.5 bg-white/5 rounded-2xl border border-white/5">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Damage Taken</span>
-                  <span className="text-lg font-black text-red-400 font-mono">{hud.stats.damageTaken}</span>
+                <div className="p-3.5 bg-purple-950/40 rounded-2xl border border-purple-500/20">
+                  <span className="text-[10px] text-purple-300/70 font-bold uppercase block">Damage Taken</span>
+                  <span className="text-lg font-black text-rose-400 font-mono">{hud.stats.damageTaken}</span>
                 </div>
-                <div className="p-3.5 bg-white/5 rounded-2xl border border-white/5">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Bots Neutralized</span>
-                  <span className="text-lg font-black text-yellow-400 font-mono">{hud.stats.botsDefeated}</span>
+                <div className="p-3.5 bg-purple-950/40 rounded-2xl border border-purple-500/20">
+                  <span className="text-[10px] text-purple-300/70 font-bold uppercase block">Bots Neutralized</span>
+                  <span className="text-lg font-black text-amber-300 font-mono">{hud.stats.botsDefeated}</span>
                 </div>
               </div>
 
@@ -662,8 +686,8 @@ export const EncartoArena: React.FC<EncartoArenaProps> = ({ onBackToHub, playerN
                     onClick={() => handleApplyConfig(selectedMode, d, selectedBotCount)}
                     className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border transition-all ${
                       selectedDifficulty === d
-                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
-                        : 'bg-white/5 hover:bg-white/10 text-gray-400 border-white/10'
+                        ? 'bg-purple-600 text-white border-purple-400 shadow-lg shadow-purple-500/30'
+                        : 'bg-purple-950/40 hover:bg-purple-900/60 text-purple-300 border-purple-500/30'
                     }`}
                   >
                     {d}
@@ -674,13 +698,13 @@ export const EncartoArena: React.FC<EncartoArenaProps> = ({ onBackToHub, playerN
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => handleRestart()}
-                  className="flex-1 py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-2"
+                  className="flex-1 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <RotateCcw size={16} /> Instant Rematch
                 </button>
                 <button
                   onClick={onBackToHub}
-                  className="px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black text-xs uppercase tracking-widest border border-white/10 transition-all"
+                  className="px-6 py-3.5 bg-purple-950/60 hover:bg-purple-900/60 text-white rounded-2xl font-black text-xs uppercase tracking-widest border border-purple-500/30 transition-all cursor-pointer"
                 >
                   Hub
                 </button>

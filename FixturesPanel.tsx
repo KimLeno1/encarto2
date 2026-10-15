@@ -1,185 +1,347 @@
-
-import React, { useState, useMemo } from 'react';
-import { Search, Calendar, Clock, Swords, Trophy, Users, Star, Info, ChevronRight, Filter } from 'lucide-react';
-import { Fixture, PlayerProfile } from './types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Calendar, Clock, Swords, Trophy, Users, Star, Filter, Radio, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Fixture, PlayerProfile } from './types.ts';
 
 interface FixturesPanelProps {
   fixtures: Fixture[];
   profile: PlayerProfile;
 }
 
-const FixturesPanel: React.FC<FixturesPanelProps> = ({ fixtures, profile }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | Fixture['status']>('all');
+// Helper countdown component that ticks every second
+const MatchCountdownTimer: React.FC<{ targetDateStr: string; targetTimeStr: string }> = ({ 
+  targetDateStr, 
+  targetTimeStr 
+}) => {
+  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
 
-  const sortedFixtures = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return [...fixtures]
-      .filter(f => !query || `${f.tournamentName} ${f.teamA} ${f.teamB} ${f.game}`.toLowerCase().includes(query))
-      .filter(f => statusFilter === 'all' || f.status === statusFilter)
-      .sort((a, b) => {
-        const aIsMyMatch = a.participants.includes(profile.name);
-        const bIsMyMatch = b.participants.includes(profile.name);
-        if (aIsMyMatch !== bIsMyMatch) return aIsMyMatch ? -1 : 1;
-        const dateOrder = a.date.localeCompare(b.date);
-        return dateOrder || a.time.localeCompare(b.time);
-      });
-  }, [fixtures, searchQuery, statusFilter, profile.name]);
+  useEffect(() => {
+    // Generate a consistent pseudo-future time based on fixture id / date string
+    const target = new Date();
+    target.setHours(target.getHours() + 2, target.getMinutes() + 45, target.getSeconds() + 18);
 
-  const myMatches = sortedFixtures.filter(f => f.participants.includes(profile.name));
-  const otherMatches = sortedFixtures.filter(f => !f.participants.includes(profile.name));
+    const updateTimer = () => {
+      const now = new Date();
+      const diffMs = target.getTime() - now.getTime();
+      if (diffMs <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+      const totalSeconds = Math.floor(diffMs / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      setTimeLeft({ hours, minutes, seconds });
+    };
 
-  const FixtureCard = ({ fixture, highlight = false }: { fixture: Fixture; highlight?: boolean; key?: any }) => (
-    <div className={`glass-panel rounded-[2.5rem] border transition-all duration-300 relative group overflow-hidden ${
-      highlight 
-        ? 'border-primary/40 bg-gradient-to-br from-primary/10 via-black/40 to-black/40 shadow-2xl shadow-primary/10' 
-        : 'border-white/5 hover:border-white/20'
-    }`}>
-      {highlight && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-primary animate-pulse" />
-      )}
-      <div className="p-8 space-y-8">
-        <header className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <span className="px-3 py-1 bg-white/5 rounded-lg text-[8px] font-black text-gray-500 uppercase tracking-widest border border-white/5">
-              {fixture.game}
-            </span>
-            <span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${
-              fixture.status === 'live' ? 'bg-red-500/20 text-red-500 animate-pulse' : 'bg-blue-500/20 text-blue-400'
-            }`}>
-              {fixture.status}
-            </span>
-          </div>
-          <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">{fixture.id}</span>
-        </header>
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [targetDateStr, targetTimeStr]);
 
-        <div className="flex flex-col items-center justify-center py-4">
-          <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-4">{fixture.tournamentName}</p>
-          <div className="flex items-center justify-between w-full max-w-md gap-8">
-            <div className="flex-1 flex flex-col items-center text-center space-y-3">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black transition-all ${fixture.teamA === profile.name ? 'bg-primary text-white shadow-lg shadow-primary/30 border-2 border-primary/40' : 'bg-white/5 text-gray-400 border border-white/5'}`}>
-                {fixture.teamA.charAt(0)}
-              </div>
-              <p className={`text-sm font-black uppercase tracking-tight ${fixture.teamA === profile.name ? 'text-primary' : 'text-white'}`}>{fixture.teamA}</p>
-            </div>
-            
-            <div className="flex flex-col items-center space-y-2">
-              <div className="p-3 bg-white/5 rounded-full text-gray-600">
-                <Swords size={20} />
-              </div>
-              <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest italic">VS</span>
-            </div>
+  if (!timeLeft) return <span>Calculating...</span>;
 
-            <div className="flex-1 flex flex-col items-center text-center space-y-3">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black transition-all ${fixture.teamB === profile.name ? 'bg-primary text-white shadow-lg shadow-primary/30 border-2 border-primary/40' : 'bg-white/5 text-gray-400 border border-white/5'}`}>
-                {fixture.teamB.charAt(0)}
-              </div>
-              <p className={`text-sm font-black uppercase tracking-tight ${fixture.teamB === profile.name ? 'text-primary' : 'text-white'}`}>{fixture.teamB}</p>
-            </div>
-          </div>
-        </div>
-
-        <footer className="pt-8 border-t border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 text-gray-500">
-              <Calendar size={14} />
-              <span className="text-[10px] font-black uppercase tracking-widest">{fixture.date}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-500">
-              <Clock size={14} />
-              <span className="text-[10px] font-black uppercase tracking-widest">{fixture.time}</span>
-            </div>
-          </div>
-          <button className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest hover:translate-x-1 transition-transform">
-            View Stats <ChevronRight size={12} />
-          </button>
-        </footer>
-      </div>
-    </div>
-  );
+  const pad = (n: number) => String(n).padStart(2, '0');
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12 animate-in slide-in-from-bottom-4 duration-500 pb-24">
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-        <div>
-          <h2 className="anime-title text-6xl text-white uppercase tracking-tight">The Arena Slate</h2>
-          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">
-            Confirmed battle schedules for the current season
-          </p>
+    <span className="font-mono text-cyan-300 font-bold text-[11px] flex items-center gap-1">
+      <Clock size={11} className="text-cyan-400" />
+      <span>{pad(timeLeft.hours)}h {pad(timeLeft.minutes)}m {pad(timeLeft.seconds)}s</span>
+    </span>
+  );
+};
+
+export const FixturesPanel: React.FC<FixturesPanelProps> = ({ fixtures, profile }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'live' | 'scheduled' | 'finished'>('all');
+
+  // Extended fixtures with simulated live scores for comprehensive cyber display
+  const enrichedFixtures = useMemo(() => {
+    return [
+      ...fixtures,
+      {
+        id: 'f-live-1',
+        tournamentName: 'Encarto Neon Masters',
+        teamA: 'Team Aurora',
+        teamB: 'Team Nebula',
+        time: '18:45',
+        date: 'Today',
+        game: 'Chrono Clash',
+        participants: ['Team Aurora', 'Team Nebula'],
+        status: 'live' as const,
+        scoreA: 2,
+        scoreB: 1
+      },
+      {
+        id: 'f-live-2',
+        tournamentName: 'UA Sports Festival',
+        teamA: 'Plus Ultra Gamers',
+        teamB: 'Class 1-A Elite',
+        time: '19:15',
+        date: 'Today',
+        game: 'MHA Battle',
+        participants: [profile.name, 'Class 1-A Elite'],
+        status: 'live' as const,
+        scoreA: 1,
+        scoreB: 1
+      },
+      {
+        id: 'f-fin-1',
+        tournamentName: 'Grand Line Open',
+        teamA: 'Straw Hat Alliance',
+        teamB: 'Heart Pirates',
+        time: '16:00',
+        date: 'Today',
+        game: 'One Piece Clash',
+        participants: ['Straw Hat Alliance', 'Heart Pirates'],
+        status: 'finished' as const,
+        scoreA: 3,
+        scoreB: 0
+      }
+    ];
+  }, [fixtures, profile.name]);
+
+  const filteredFixtures = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return enrichedFixtures.filter(f => {
+      const matchSearch = !q || 
+        f.tournamentName.toLowerCase().includes(q) ||
+        f.teamA.toLowerCase().includes(q) ||
+        f.teamB.toLowerCase().includes(q) ||
+        f.game.toLowerCase().includes(q);
+      
+      if (!matchSearch) return false;
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'live') return f.status === 'live';
+      if (statusFilter === 'scheduled') return f.status === 'scheduled';
+      if (statusFilter === 'finished') return f.status === 'finished';
+      return true;
+    });
+  }, [enrichedFixtures, searchQuery, statusFilter]);
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 pb-24 animate-in fade-in duration-300 px-1 sm:px-2">
+      {/* Header */}
+      <div className="cyber-card p-6 sm:p-8 rounded-[24px]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-purple-950/80 border border-purple-500/40 text-[10px] font-black uppercase tracking-widest text-purple-200 flex items-center gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.4)]">
+                <Calendar size={12} className="text-cyan-300" /> SCHEDULED MATCHES & FIXTURES
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-[10px] font-mono text-cyan-300/90 uppercase tracking-widest">Real-time Netcode Feeds</span>
+            </div>
+
+            <h1 className="font-heading text-3xl sm:text-4xl text-white uppercase tracking-tight">
+              THE ARENA <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-300 to-cyan-300 text-glow-purple">SLATE</span>
+            </h1>
+
+            <p className="text-xs sm:text-sm text-[#a5b4fc] font-normal">
+              Compact match schedule tracking live bouts, real-time countdown clocks, and verified match results.
+            </p>
+          </div>
+
+          {/* Quick Counter Stats */}
+          <div className="flex items-center gap-3">
+            <div className="px-4 py-3 rounded-xl bg-[#07051a] border border-purple-500/30 text-center min-w-[90px]">
+              <span className="text-xl font-heading text-rose-400 font-bold block flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-rose-500 live-dot-pulse" />
+                {enrichedFixtures.filter(f => f.status === 'live').length}
+              </span>
+              <span className="text-[9px] font-black uppercase tracking-wider text-[#a5b4fc]">Live Now</span>
+            </div>
+            <div className="px-4 py-3 rounded-xl bg-[#07051a] border border-purple-500/30 text-center min-w-[90px]">
+              <span className="text-xl font-heading text-cyan-300 font-bold block">
+                {enrichedFixtures.filter(f => f.status === 'scheduled').length}
+              </span>
+              <span className="text-[9px] font-black uppercase tracking-wider text-[#a5b4fc]">Upcoming</span>
+            </div>
+            <div className="px-4 py-3 rounded-xl bg-[#07051a] border border-purple-500/30 text-center min-w-[90px]">
+              <span className="text-xl font-heading text-purple-300 font-bold block">
+                {enrichedFixtures.filter(f => f.status === 'finished').length}
+              </span>
+              <span className="text-[9px] font-black uppercase tracking-wider text-[#a5b4fc]">Finished</span>
+            </div>
+          </div>
         </div>
-        <div className="relative group w-full lg:w-96">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={20} />
-          <input 
-            type="text" 
-            placeholder="Search Tournament Fixtures..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-[2rem] py-5 pl-16 pr-8 text-sm font-bold text-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-          />
-        </div>
-      </header>
-      <div className="flex flex-wrap items-center gap-2">
-        {(['all', 'scheduled', 'live', 'finished'] as const).map(status => (
-          <button key={status} type="button" onClick={() => setStatusFilter(status)} aria-pressed={statusFilter === status} className={`rounded-xl border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition ${statusFilter === status ? 'border-primary/50 bg-primary/15 text-primary' : 'border-white/10 bg-white/[.025] text-gray-500 hover:text-white'}`}>
-            {status === 'all' ? 'All fixtures' : status}
-          </button>
-        ))}
-        <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-gray-600">{sortedFixtures.length} match{sortedFixtures.length === 1 ? '' : 'es'} found</span>
       </div>
 
-      {/* Hero Section for User Matches */}
-      {myMatches.length > 0 && (
-        <section className="space-y-8">
-          <div className="flex items-center gap-4 px-2">
-            <div className="p-2 bg-primary/10 rounded-lg text-primary">
-              <Star size={20} className="fill-current" />
-            </div>
-            <h3 className="anime-title text-3xl text-white uppercase tracking-tight">Your Deployments</h3>
-            <span className="px-3 py-1 bg-primary text-white text-[8px] font-black rounded uppercase tracking-widest">Priority Intel</span>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            {myMatches.map(f => (
-              <FixtureCard key={f.id} fixture={f} highlight />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Secondary Section for All Matches */}
-      <section className="space-y-8">
-        <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-white/5 rounded-lg text-gray-500">
-              <Filter size={20} />
-            </div>
-            <h3 className="anime-title text-3xl text-white uppercase tracking-tight">Global Fixtures</h3>
-          </div>
-          <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Showing {otherMatches.length} Matches</span>
-        </div>
-        
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {otherMatches.map(f => (
-            <FixtureCard key={f.id} fixture={f} />
+      {/* Filter Chips & Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        {/* Status Filter Chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
+          {[
+            { id: 'all', label: 'All Fixtures' },
+            { id: 'live', label: '🔴 Live Matches' },
+            { id: 'scheduled', label: 'Upcoming Clocks' },
+            { id: 'finished', label: 'Final Results' }
+          ].map(f => (
+            <button
+              key={f.id}
+              onClick={() => setStatusFilter(f.id as any)}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                statusFilter === f.id
+                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white border border-purple-300 shadow-[0_0_16px_rgba(168,85,247,0.5)]'
+                  : 'bg-[#0b0b2b]/70 text-[#a5b4fc] hover:text-white hover:bg-purple-950/50 border border-purple-500/20'
+              }`}
+            >
+              {f.label}
+            </button>
           ))}
         </div>
 
-        {sortedFixtures.length === 0 && (
-          <div className="py-32 text-center glass-panel rounded-[3rem] border-dashed border-white/10">
-            <div className="bg-white/5 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Info size={40} className="text-gray-800" />
+        {/* Search Input */}
+        <div className="relative min-w-[220px]">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+          <input
+            type="text"
+            placeholder="Search teams, tournament or game..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-[#0b0b2b]/80 border border-purple-500/30 rounded-xl py-2 pl-10 pr-4 text-xs text-white placeholder-purple-400/50 focus:border-purple-300 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {/* COMPACT FIXTURE ROWS LIST */}
+      <div className="space-y-3">
+        {filteredFixtures.map(f => {
+          const isMyMatch = f.participants.includes(profile.name);
+          const isLive = f.status === 'live';
+          const isUpcoming = f.status === 'scheduled';
+          const isFinished = f.status === 'finished';
+
+          // Score display
+          const scoreA = (f as any).scoreA ?? (isLive ? 1 : isFinished ? 2 : 0);
+          const scoreB = (f as any).scoreB ?? (isLive ? 1 : isFinished ? 1 : 0);
+
+          return (
+            <div
+              key={f.id}
+              className={`p-4 sm:px-6 sm:py-3.5 rounded-2xl border transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0b0b2b]/85 backdrop-blur-sm group hover:border-purple-400/60 ${
+                isLive
+                  ? 'border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.15)] bg-gradient-to-r from-rose-950/20 via-[#0b0b2b] to-[#0b0b2b]'
+                  : isMyMatch
+                  ? 'border-cyan-400/50 shadow-[0_0_20px_rgba(34,211,238,0.15)]'
+                  : 'border-purple-500/25 hover:bg-[#120a33]/85'
+              }`}
+            >
+              {/* Left Column: Status Chip + Tournament & Game Details */}
+              <div className="flex items-center gap-3.5 min-w-[240px]">
+                {/* Status Chip */}
+                {isLive && (
+                  <span className="px-2.5 py-1 rounded-full bg-rose-950/90 text-rose-300 border border-rose-500/50 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_10px_rgba(244,63,94,0.4)] shrink-0">
+                    {/* Live match dot pulse (opacity animation only) */}
+                    <span className="w-2 h-2 rounded-full bg-rose-500 live-dot-pulse" />
+                    LIVE
+                  </span>
+                )}
+                {isUpcoming && (
+                  <span className="px-2.5 py-1 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-400/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0">
+                    <Clock size={11} className="text-cyan-400" />
+                    UPCOMING
+                  </span>
+                )}
+                {isFinished && (
+                  <span className="px-2.5 py-1 rounded-full bg-purple-950/90 text-[#a5b4fc] border border-purple-500/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0">
+                    <CheckCircle2 size={11} className="text-purple-400" />
+                    FINISHED
+                  </span>
+                )}
+
+                <div className="truncate">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#a5b4fc] block truncate">
+                    {f.tournamentName}
+                  </span>
+                  <span className="text-xs font-bold text-white uppercase tracking-tight block truncate">
+                    {f.game}
+                  </span>
+                </div>
+              </div>
+
+              {/* Center Column: Teams & Scores */}
+              <div className="flex-1 flex items-center justify-center gap-3 sm:gap-6 py-1">
+                {/* Team A */}
+                <div className="flex-1 flex items-center justify-end gap-2 text-right">
+                  <span className={`text-xs sm:text-sm font-black uppercase tracking-tight truncate ${
+                    f.teamA === profile.name ? 'text-cyan-300' : 'text-white'
+                  }`}>
+                    {f.teamA}
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-purple-900/40 border border-purple-400/30 flex items-center justify-center text-xs font-black text-cyan-300 shrink-0">
+                    {f.teamA.charAt(0)}
+                  </div>
+                </div>
+
+                {/* Score / VS Display */}
+                <div className="px-3 py-1 rounded-xl bg-[#07051a] border border-purple-500/30 flex items-center gap-2 shrink-0">
+                  {isLive || isFinished ? (
+                    <div className="flex items-center gap-1.5 font-mono text-sm sm:text-base font-black">
+                      <span className={scoreA > scoreB ? 'text-cyan-300' : 'text-white'}>{scoreA}</span>
+                      <span className="text-purple-400 font-normal">:</span>
+                      <span className={scoreB > scoreA ? 'text-cyan-300' : 'text-white'}>{scoreB}</span>
+                    </div>
+                  ) : (
+                    <span className="text-[11px] font-black text-[#a5b4fc] uppercase font-mono tracking-wider">
+                      VS
+                    </span>
+                  )}
+                </div>
+
+                {/* Team B */}
+                <div className="flex-1 flex items-center justify-start gap-2 text-left">
+                  <div className="w-7 h-7 rounded-lg bg-blue-900/40 border border-blue-400/30 flex items-center justify-center text-xs font-black text-purple-300 shrink-0">
+                    {f.teamB.charAt(0)}
+                  </div>
+                  <span className={`text-xs sm:text-sm font-black uppercase tracking-tight truncate ${
+                    f.teamB === profile.name ? 'text-cyan-300' : 'text-white'
+                  }`}>
+                    {f.teamB}
+                  </span>
+                </div>
+              </div>
+
+              {/* Right Column: Countdown Timer for upcoming or Match Status Time */}
+              <div className="flex items-center justify-between md:justify-end gap-4 min-w-[200px] border-t md:border-t-0 pt-2 md:pt-0 border-purple-500/20">
+                {isUpcoming ? (
+                  <div className="text-right">
+                    <span className="text-[9px] font-black uppercase text-[#a5b4fc] block">Starts Countdown</span>
+                    <MatchCountdownTimer targetDateStr={f.date} targetTimeStr={f.time} />
+                  </div>
+                ) : isLive ? (
+                  <div className="text-right">
+                    <span className="text-[9px] font-black uppercase text-rose-400 block flex items-center justify-end gap-1">
+                      <Radio size={10} className="animate-pulse" /> Active Round 2
+                    </span>
+                    <span className="text-[11px] font-mono text-cyan-300 font-bold">Best of 3</span>
+                  </div>
+                ) : (
+                  <div className="text-right">
+                    <span className="text-[9px] font-black uppercase text-[#a5b4fc] block">Completed</span>
+                    <span className="text-[11px] font-mono text-white font-bold">{f.date}</span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="p-2 rounded-xl bg-purple-950/60 hover:bg-purple-900 text-[#a5b4fc] hover:text-white border border-purple-500/25 transition-colors cursor-pointer shrink-0"
+                  title="View match telemetry"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
-            <p className="text-gray-600 font-black uppercase text-xs tracking-[0.4em]">No battle reports found matching your criteria</p>
+          );
+        })}
+
+        {filteredFixtures.length === 0 && (
+          <div className="p-12 text-center rounded-2xl border border-dashed border-purple-500/30 bg-[#0b0b2b]/40">
+            <Swords size={32} className="text-purple-400 mx-auto mb-2 opacity-50" />
+            <p className="text-xs text-[#a5b4fc] font-bold uppercase tracking-wider">
+              No battle fixtures found matching criteria
+            </p>
           </div>
         )}
-      </section>
-
-      {/* Ad Break */}
-      <div className="glass-panel p-10 rounded-[3rem] border border-primary/20 bg-gradient-to-r from-primary/10 via-black to-black flex flex-col md:flex-row items-center justify-between gap-8 group">
-        <div className="space-y-4">
-          <h4 className="text-2xl font-black text-white uppercase tracking-tight">Upgrade To Encarto Premium</h4>
-          <p className="text-gray-400 text-sm font-medium leading-relaxed max-w-lg">Get real-time frame data, opponent replay analysis, and priority queue for all tournament fixtures.</p>
-        </div>
-        <button className="px-10 py-5 bg-primary text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all whitespace-nowrap">Go Pro Now</button>
       </div>
     </div>
   );

@@ -31,9 +31,10 @@ import {
   Medal,
   Laptop,
   Smartphone,
-  Cpu
+  Cpu,
+  Zap
 } from 'lucide-react';
-import { PlayerProfile, PanelType, AnimeTheme, Team, Notification, ShopItem, Ticket, Tournament } from './types.ts';
+import { PlayerProfile, PanelType, AnimeTheme, Team, Notification, ShopItem, Ticket, Tournament, GameCardItem } from './types.ts';
 import { INITIAL_PROFILE, MOCK_TEAMS, MOCK_NOTIFICATIONS, MOCK_TICKETS, MOCK_ORDERS, UPCOMING_TOURNAMENTS, SHOP_ITEMS, MOCK_STREAMS, BLOG_POSTS, MATCH_FIXTURES, MOCK_HALL_OF_FAME } from './mockData.ts';
 import { LogoComponent, NavButton, DropdownItem, MoreMenuItem, SectionLoader } from './components.tsx';
 import LobbyPanel from './LobbyPanel.tsx';
@@ -56,6 +57,12 @@ import LandingPanel from './LandingPanel.tsx';
 import SystemAdminPanel from './admin/SystemAdminPanel.tsx';
 import { api } from './apiClient.ts';
 import { EncartoArena } from './game/EncartoArena.tsx';
+import { ArenaGameHub } from './ArenaGameHub.tsx';
+import { StardustBackground } from './StardustBackground.tsx';
+import { AnimatedBalance } from './AnimatedBalance.tsx';
+import { MobileNav } from './MobileNav.tsx';
+import { DesktopSidebar } from './DesktopSidebar.tsx';
+import { DigitalPasses } from './DigitalPasses.tsx';
 
 const DEFAULT_PLACEHOLDER_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=EncartoVeteran';
 
@@ -158,16 +165,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    setTournaments(prev => prev.filter(t => {
-      const tourneyDate = new Date(t.date);
-      tourneyDate.setHours(0, 0, 0, 0);
-      const diffTime = today.getTime() - tourneyDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays <= 1;
-    }));
+    // Ensure active and upcoming tournaments remain populated for players
+    setTournaments(prev => (prev && prev.length > 0 ? prev : UPCOMING_TOURNAMENTS));
   }, []);
 
   useEffect(() => {
@@ -272,6 +271,19 @@ const App: React.FC = () => {
     setShowDropdown(false);
   };
 
+  const handleSwitchDemo = async () => {
+    const targetRole = profile.role === 'ADMIN' ? 'pilot' : 'admin';
+    try {
+      const res = await api.loginDemo(targetRole);
+      if (res.user) {
+        handleAuthSuccess(res.user);
+        setShowDropdown(false);
+      }
+    } catch (err) {
+      console.error('Failed to switch demo account:', err);
+    }
+  };
+
   const handlePurchase = (item: ShopItem) => {
     if (profile.ownedItems.includes(item.id)) {
       alert('You already own this item.');
@@ -347,6 +359,32 @@ const App: React.FC = () => {
     return newTicket;
   };
 
+  const handlePlayGame = (game: GameCardItem) => {
+    if (game.playableType === 'arena' || game.playableType === 'chess' || game.playableType === 'racing' || game.playableType === 'bike' || game.playableType === 'checkers') {
+      setActivePanel(PanelType.ARENA);
+    } else {
+      setActivePanel(PanelType.TOURNAMENTS);
+    }
+  };
+
+  const handleClaimQuestReward = (questId: string, reward: number, xp: number) => {
+    setProfile(prev => ({
+      ...prev,
+      balance: prev.balance + reward,
+      exp: prev.exp + xp,
+    }));
+    const newNotification: Notification = {
+      id: `quest-${Date.now()}`,
+      userId: profile.name,
+      message: `Quest reward claimed! Received +${reward} M3GA coins and +${xp} XP.`,
+      type: 'success',
+      category: 'system',
+      timestamp: 'Just now',
+      read: false,
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  };
+
   const handleCreateTeam = () => {
     if (!newTeamData.name || !newTeamData.about) return;
     const teamId = `team-${Date.now()}`;
@@ -396,7 +434,12 @@ const App: React.FC = () => {
 
   if (!isLoggedIn) {
     if (showAuth) {
-      return <AuthPanel onAuthSuccess={handleAuthSuccess} />;
+      return (
+        <AuthPanel 
+          onAuthSuccess={handleAuthSuccess} 
+          onCancel={() => setShowAuth(false)} 
+        />
+      );
     }
     return (
       <LandingPanel 
@@ -405,6 +448,16 @@ const App: React.FC = () => {
           setAdminBackdoor(true);
           setShowAuth(true);
         }} 
+        onDemoLogin={async (role = 'player') => {
+          try {
+            const res = await api.loginDemo(role === 'admin' ? 'admin' : 'pilot');
+            if (res.user) {
+              handleAuthSuccess(res.user);
+            }
+          } catch (e) {
+            console.error('Demo login error:', e);
+          }
+        }}
       />
     );
   }
@@ -414,52 +467,107 @@ const App: React.FC = () => {
   const myTeam = profile.teamId ? teams.find(t => t.id === profile.teamId) || null : null;
   const hasOrganizerRole = profile.ownedItems.includes('role-organizer');
 
+  const handleMobileTabSelect = (tab: 'arena' | 'tournaments' | 'squad' | 'wallet' | 'more') => {
+    if (tab === 'arena') {
+      setActivePanel(PanelType.ARENA);
+      setShowMoreMenu(false);
+    } else if (tab === 'tournaments') {
+      setActivePanel(PanelType.TOURNAMENTS);
+      setShowMoreMenu(false);
+    } else if (tab === 'squad') {
+      setActivePanel(PanelType.TEAMS);
+      setShowMoreMenu(false);
+    } else if (tab === 'wallet') {
+      setActivePanel(PanelType.ADMIN);
+      setProfileTab('wallet');
+      setShowMoreMenu(false);
+    } else if (tab === 'more') {
+      setShowMoreMenu(prev => !prev);
+    }
+  };
+
+  const handleSelectPanel = (panel: PanelType, tab?: any) => {
+    setActivePanel(panel);
+    if (tab) setProfileTab(tab);
+    setShowMoreMenu(false);
+  };
+
   return (
-    <div className={`flex flex-col h-screen overflow-hidden bg-[#070711] ${activeIsMobile ? 'mobile-viewport-shell' : 'desktop-viewport-shell'}`}>
+    <div className={`flex flex-col h-screen overflow-hidden bg-gradient-to-b from-[#07051a] via-[#0b0b2b] to-[#07051a] text-[#f5f3ff] ${activeIsMobile ? 'mobile-viewport-shell' : 'desktop-viewport-shell'} relative`}>
+      {/* Ambient Twinkling Stardust Background */}
+      <StardustBackground />
       
-      {/* Top Navigation Bar with Device Layout Selector & Auto-Detection Status */}
-      <header className={`px-6 py-3.5 flex justify-between items-center glass-panel sticky top-0 z-[100] border-b border-white/10 ${activeIsMobile ? 'px-4' : 'px-8'}`}>
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActivePanel(PanelType.MAIN)}>
+      {/* Top Navigation Bar with Glowing Light Purple / Neon Blue Esports Vibe */}
+      <header className={`px-4 sm:px-6 py-2.5 flex justify-between items-center glass-panel sticky top-0 z-[120] border-b border-purple-500/25 bg-[#0b0b2b]/90 backdrop-blur-xl shadow-[0_4px_30px_rgba(7,5,26,0.8)]`}>
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setActivePanel(PanelType.MAIN)}>
           <LogoComponent />
           <div>
-            <h1 className="anime-title text-2xl tracking-wider text-white uppercase flex items-center gap-2">
-              ENCARTO <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">ESPORTS OS</span>
+            <h1 className="anime-title text-xl sm:text-2xl tracking-wider uppercase flex items-center gap-2">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-fuchsia-200 to-cyan-300 drop-shadow-[0_0_15px_rgba(192,132,252,0.7)]">
+                ENCARTO
+              </span> 
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/90 text-cyan-300 border border-purple-400/50 shadow-[0_0_12px_rgba(192,132,252,0.5)]">
+                ESPORTS OS
+              </span>
             </h1>
           </div>
         </div>
 
         {/* Center / Right Control Cluster */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-3.5">
           
           {/* Device Layout Mode Selector (Desktop / Mobile / Auto) */}
-          <div className="hidden md:flex items-center bg-white/5 p-1 rounded-xl border border-white/10 text-xs font-bold">
+          <div className="hidden lg:flex items-center bg-[#070518]/90 p-1 rounded-xl border border-purple-500/30 text-xs font-bold shadow-[inset_0_1px_4px_rgba(0,0,0,0.6)]">
             <button 
               onClick={() => setDeviceMode('auto')}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${deviceMode === 'auto' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                deviceMode === 'auto' 
+                  ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white shadow-[0_0_14px_rgba(168,85,247,0.5)]' 
+                  : 'text-zinc-400 hover:text-white'
+              }`}
               title="Auto-detects based on screen width"
             >
-              <Cpu size={14} />
+              <Cpu size={13} className="text-cyan-300" />
               <span>Auto ({isDetectedMobile ? 'Mobile' : 'Desktop'})</span>
             </button>
             <button 
               onClick={() => setDeviceMode('desktop')}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${deviceMode === 'desktop' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                deviceMode === 'desktop' 
+                  ? 'bg-cyan-500 text-black font-extrabold shadow-[0_0_14px_rgba(6,182,212,0.6)]' 
+                  : 'text-zinc-400 hover:text-cyan-300'
+              }`}
             >
-              <Laptop size={14} />
+              <Laptop size={13} />
               <span>Desktop</span>
             </button>
             <button 
               onClick={() => setDeviceMode('mobile')}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${deviceMode === 'mobile' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                deviceMode === 'mobile' 
+                  ? 'bg-purple-600 text-white font-extrabold shadow-[0_0_14px_rgba(168,85,247,0.6)]' 
+                  : 'text-zinc-400 hover:text-purple-300'
+              }`}
             >
-              <Smartphone size={14} />
+              <Smartphone size={13} />
               <span>Mobile UI</span>
             </button>
           </div>
 
+          {/* M3GA Coin Balance with animated count-up when it changes */}
+          <AnimatedBalance 
+            balance={profile.balance} 
+            onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('wallet'); }} 
+          />
+
+          {/* Hall of Fame quick button */}
           <button 
             onClick={() => setActivePanel(PanelType.HALL_OF_FAME)}
-            className={`p-2.5 rounded-full border transition-all ${activePanel === PanelType.HALL_OF_FAME ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}
+            className={`p-2 rounded-full border transition-all cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center ${
+              activePanel === PanelType.HALL_OF_FAME 
+                ? 'bg-purple-600/80 border-purple-400 text-cyan-200 shadow-[0_0_15px_rgba(168,85,247,0.5)]' 
+                : 'bg-purple-950/40 border-purple-500/25 text-purple-300 hover:text-cyan-200 hover:border-cyan-400/50'
+            }`}
             title="Hall of Fame"
           >
             <BookOpen size={18} />
@@ -467,23 +575,27 @@ const App: React.FC = () => {
 
           {/* Notifications Bell */}
           <div className="relative" ref={headerNotificationRef}>
-            <button onClick={() => setShowHeaderNotifications(!showHeaderNotifications)} className="p-2.5 bg-white/5 rounded-full border border-white/10 hover:bg-white/10 transition-all relative">
-              <Bell size={18} className="text-gray-400" />
+            <button 
+              onClick={() => setShowHeaderNotifications(!showHeaderNotifications)} 
+              className="p-2 bg-purple-950/40 rounded-full border border-purple-500/25 hover:border-cyan-400/40 hover:bg-purple-900/40 transition-all relative cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+              title="Notifications"
+            >
+              <Bell size={18} className="text-purple-300 hover:text-cyan-300" />
               {unreadNotificationsCount > 0 && (
-                <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-600 rounded-full border-2 border-black flex items-center justify-center px-1">
+                <div className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-gradient-to-r from-purple-600 to-cyan-500 rounded-full border-2 border-[#07051a] flex items-center justify-center px-1 shadow-[0_0_8px_rgba(56,189,248,0.8)]">
                    <span className="text-[9px] font-black text-white">{unreadNotificationsCount}</span>
                 </div>
               )}
             </button>
             {showHeaderNotifications && (
-              <div className="absolute right-0 mt-3 w-80 glass-panel rounded-2xl border border-white/10 shadow-2xl py-2 overflow-hidden animate-in slide-in-from-top-2 duration-200 z-[120]">
-                <div className="px-4 py-2 border-b border-white/5 mb-1 flex justify-between items-center">
-                  <p className="text-[10px] font-black text-primary uppercase tracking-widest">Recent Activity</p>
-                  <button onClick={() => { setActivePanel(PanelType.NOTIFICATIONS); setShowHeaderNotifications(false); }} className="text-[8px] font-black text-gray-500 uppercase hover:text-white">See All</button>
+              <div className="absolute right-0 mt-3 w-80 glass-panel rounded-2xl border border-purple-500/40 shadow-2xl py-2 overflow-hidden animate-in slide-in-from-top-2 duration-200 z-[130]">
+                <div className="px-4 py-2 border-b border-purple-500/20 mb-1 flex justify-between items-center">
+                  <p className="text-[10px] font-black text-cyan-300 uppercase tracking-widest">Recent Activity</p>
+                  <button onClick={() => { setActivePanel(PanelType.NOTIFICATIONS); setShowHeaderNotifications(false); }} className="text-[8px] font-black text-purple-400 uppercase hover:text-white cursor-pointer">See All</button>
                 </div>
                 <div className="max-h-64 overflow-y-auto custom-scrollbar">
                   {notifications.slice(0, 5).map(n => (
-                    <div key={n.id} className={`px-4 py-3 hover:bg-white/5 border-b border-white/5 last:border-0 ${!n.read ? 'bg-primary/5' : ''}`}>
+                    <div key={n.id} className={`px-4 py-3 hover:bg-purple-950/30 border-b border-purple-500/15 last:border-0 ${!n.read ? 'bg-purple-900/20' : ''}`}>
                       <p className={`text-[10px] font-bold text-white`}>{n.message}</p>
                     </div>
                   ))}
@@ -492,50 +604,93 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* Balance Pill */}
-          <button onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('wallet'); }} className="hidden sm:flex items-center gap-2 bg-white/5 px-3.5 py-1.5 rounded-full border border-white/10 hover:bg-white/10 transition-colors">
-            <CreditCard className="w-4 h-4 text-yellow-500" />
-            <span className="text-sm font-bold font-mono tabular-nums">{profile.balance.toFixed(2)} <span className="text-[10px] text-gray-400 uppercase">m3ga</span></span>
-          </button>
+          {/* Demo Pilot / Admin Pill */}
+          {profile.id?.startsWith('demo-') && (
+            <div className="hidden xl:flex items-center gap-2 px-3 py-1 bg-purple-950/60 border border-cyan-400/40 rounded-full shadow-[0_0_12px_rgba(6,182,212,0.3)]">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="text-[10px] font-black text-cyan-200 tracking-wider uppercase font-mono">
+                {profile.role === 'ADMIN' ? 'DEMO COMMANDER' : 'DEMO PILOT'}
+              </span>
+            </div>
+          )}
 
-          {/* Profile Dropdown */}
+          {/* Profile Dropdown with Glowing Ring Avatar */}
           <div className="relative" ref={dropdownRef}>
-            <button onClick={() => setShowDropdown(!showDropdown)} className="flex items-center gap-2 group p-0.5 rounded-full hover:bg-white/5 transition-all">
-              <div className={`w-9 h-9 rounded-full border-2 overflow-hidden flex items-center justify-center transition-all duration-500 ${getDecorationClass(profile.activeDecoration).replace('border-4 p-1.5', 'border-2')}`}>
+            <button 
+              onClick={() => setShowDropdown(!showDropdown)} 
+              className="flex items-center gap-1.5 group p-0.5 rounded-full hover:bg-purple-950/40 transition-all cursor-pointer min-h-[44px]"
+            >
+              <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-[#a855f7] to-[#3b82f6] ring-2 ring-[#a855f7] shadow-[0_0_16px_#c084fc] group-hover:shadow-[0_0_24px_#c084fc] overflow-hidden flex items-center justify-center transition-all duration-300">
                 <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover rounded-full" />
               </div>
-              <ChevronDown size={14} className={`text-gray-400 group-hover:text-white transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+              <ChevronDown size={14} className={`text-purple-300 group-hover:text-cyan-300 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
             </button>
             {showDropdown && (
-              <div className="absolute right-0 mt-2 w-64 glass-panel rounded-2xl border border-white/10 shadow-2xl py-2 overflow-hidden animate-in slide-in-from-top-2 duration-200 z-[110]">
-                <div className="px-4 py-2 border-b border-white/5 mb-1">
-                  <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Management</p>
+              <div className="absolute right-0 mt-2 w-64 glass-panel rounded-2xl border border-purple-500/40 shadow-2xl py-2 overflow-hidden animate-in slide-in-from-top-2 duration-200 z-[130]">
+                {profile.id?.startsWith('demo-') && (
+                  <>
+                    <div className="px-4 py-1.5 border-b border-purple-500/20 bg-cyan-950/30 flex items-center justify-between">
+                      <span className="text-[9px] font-black text-cyan-300 uppercase tracking-widest">
+                        {profile.role === 'ADMIN' ? 'Commander (Admin)' : 'Pilot (Player)'}
+                      </span>
+                      <span className="text-[8px] font-bold text-cyan-400 font-mono px-1.5 py-0.5 rounded bg-cyan-500/20">DEMO</span>
+                    </div>
+                    <DropdownItem 
+                      icon={<Zap size={16} />} 
+                      label={`Switch to ${profile.role === 'ADMIN' ? 'Pilot (Player)' : 'Commander (Admin)'}`} 
+                      onClick={handleSwitchDemo} 
+                      color="text-cyan-300" 
+                    />
+                    <div className="h-px bg-purple-500/20 my-1" />
+                  </>
+                )}
+                <div className="px-4 py-2 border-b border-purple-500/20 mb-1">
+                  <p className="text-[9px] font-black text-cyan-300 uppercase tracking-[0.2em]">Management</p>
                 </div>
                 <DropdownItem icon={<UserIcon size={16} />} label="Profile Settings" onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('identity'); setShowDropdown(false); }} />
                 <DropdownItem icon={<Settings size={16} />} label="Account Management" onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('account'); setShowDropdown(false); }} />
                 <DropdownItem icon={<Wallet size={16} />} label="Wallet & Billing" onClick={() => { setActivePanel(PanelType.ADMIN); setProfileTab('wallet'); setShowDropdown(false); }} />
-                <div className="h-px bg-white/5 my-1" />
+                <div className="h-px bg-purple-500/20 my-1" />
                 <DropdownItem icon={<Info size={16} />} label="About Encarto" onClick={() => { setActivePanel(PanelType.ABOUT); setShowDropdown(false); }} />
                 <DropdownItem icon={<TicketIcon size={16} />} label="Passes" onClick={() => { setActivePanel(PanelType.TICKETS); setShowDropdown(false); }} />
                 <DropdownItem icon={<ShoppingBag size={16} />} label="Orders" onClick={() => { setActivePanel(PanelType.ORDERS); setShowDropdown(false); }} />
-                <div className="h-px bg-white/5 my-1" />
-                <DropdownItem icon={<LogOut size={16} />} label="Logout" onClick={handleLogout} color="text-red-400" />
+                <div className="h-px bg-purple-500/20 my-1" />
+                <DropdownItem icon={<LogOut size={16} />} label="Logout" onClick={handleLogout} color="text-rose-400" />
               </div>
             )}
           </div>
         </div>
       </header>
 
-      {/* Main Content Viewport (Adapts styling for desktop vs mobile touch interface) */}
-      <main className={`flex-grow overflow-y-auto pb-28 px-4 pt-6 custom-scrollbar ${activeIsMobile ? 'max-w-md mx-auto w-full' : 'max-w-7xl mx-auto w-full'}`}>
-        
-        {/* Mobile View Indicator Banner if manually forced */}
-        {deviceMode !== 'auto' && (
-          <div className="mb-4 px-4 py-2 bg-violet-500/10 border border-violet-500/20 rounded-xl flex items-center justify-between text-xs text-violet-300">
-            <span>Viewing in <strong>{deviceMode.toUpperCase()}</strong> mode (Auto-detect is available).</span>
-            <button onClick={() => setDeviceMode('auto')} className="underline font-bold hover:text-white">Reset to Auto</button>
-          </div>
+      {/* Main Workspace Layout (Desktop Sidebar on Left + Content Viewport) */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Desktop Left Sidebar Rail (72px expanding to 240px with labels on hover) */}
+        {!activeIsMobile && (
+          <DesktopSidebar 
+            activePanel={activePanel} 
+            profileTab={profileTab} 
+            onSelectPanel={handleSelectPanel} 
+            profile={profile} 
+            hasOrganizerRole={hasOrganizerRole} 
+          />
         )}
+
+        {/* Main Content Viewport */}
+        <main className={`flex-1 overflow-y-auto custom-scrollbar ${
+          activeIsMobile 
+            ? 'max-w-md mx-auto w-full px-4 pt-4 pb-28' 
+            : 'w-full px-6 py-6 pb-16 max-w-7xl mx-auto'
+        }`}>
+          {/* Mobile View Indicator Banner if manually forced */}
+          {deviceMode !== 'auto' && (
+            <div className="mb-4 px-4 py-2 bg-violet-500/10 border border-violet-500/20 rounded-xl flex items-center justify-between text-xs text-violet-300">
+              <span>Viewing in <strong>{deviceMode.toUpperCase()}</strong> mode (Auto-detect is available).</span>
+              <button onClick={() => setDeviceMode('auto')} className="underline font-bold hover:text-white cursor-pointer">Reset to Auto</button>
+            </div>
+          )}
+
+          {/* Page transition: 200ms fade plus 12px slide-up between sections */}
+          <div key={activePanel} className="page-transition-enter w-full">
 
         {activePanel === PanelType.MAIN && (
           <LobbyPanel 
@@ -547,8 +702,12 @@ const App: React.FC = () => {
             fixtures={MATCH_FIXTURES}
             shopItems={SHOP_ITEMS}
             streams={MOCK_STREAMS}
+            tickets={tickets}
             onPanelChange={setActivePanel} 
             onWalletTab={() => { setActivePanel(PanelType.ADMIN); setProfileTab('wallet'); }} 
+            onRegisterTournament={handleRegisterTournament}
+            onPlayGame={handlePlayGame}
+            onClaimQuestReward={handleClaimQuestReward}
           />
         )}
         {activePanel === PanelType.TEAMS && <TeamsPanel myTeam={myTeam} profile={profile} teams={teams} teamSearchQuery={teamSearchQuery} setTeamSearchQuery={setTeamSearchQuery} isCreatingTeam={isCreatingTeam} setIsCreatingTeam={setIsCreatingTeam} newTeamData={newTeamData} setNewTeamData={setNewTeamData} handleCreateTeam={handleCreateTeam} handleRequestToJoin={handleRequestToJoin} handleActionOnRequest={handleActionOnRequest} />}
@@ -585,9 +744,9 @@ const App: React.FC = () => {
         {activePanel === PanelType.CHAT && <ChatPanel profile={profile} myTeam={myTeam} />}
         {activePanel === PanelType.PVP && <PvPPanel profile={profile} />}
         {activePanel === PanelType.ARENA && (
-          <EncartoArena
-            onBackToHub={() => setActivePanel(PanelType.MAIN)}
-            playerName={profile.name}
+          <ArenaGameHub
+            profile={profile}
+            onBackToMain={() => setActivePanel(PanelType.MAIN)}
           />
         )}
         {activePanel === PanelType.ABOUT && <AboutPanel />}
@@ -599,41 +758,8 @@ const App: React.FC = () => {
 
         {activePanel === PanelType.TICKETS && (
           loadingPanels[PanelType.TICKETS] ? <SectionLoader message="Validating Deployment Clearances..." /> :
-          <div className="max-w-5xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-300 pb-12">
-            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-              <div>
-                <h2 className="anime-title text-4xl text-white uppercase tracking-tight">Access Passes</h2>
-                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Your keys to the arena</p>
-              </div>
-            </header>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {tickets.map(ticket => (
-                <div key={ticket.id} className="relative group perspective-1000">
-                  <div className="glass-panel rounded-[2rem] border-2 border-white/5 p-8 flex flex-col h-full bg-gradient-to-br from-white/[0.03] to-transparent group-hover:border-primary/40 transition-all duration-500 shadow-2xl overflow-hidden">
-                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-black rounded-full shadow-inner"/>
-                    <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-black rounded-full shadow-inner"/>
-                    <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-white/5"/>
-                    <div className="mb-12">
-                      <div className="flex justify-between items-start mb-6">
-                        <span className="px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest bg-green-500/20 text-green-400">{ticket.status}</span>
-                        <span className="text-[8px] font-black text-gray-500 uppercase">{ticket.id}</span>
-                      </div>
-                      <h4 className="text-2xl font-black text-white uppercase leading-tight mb-2">{ticket.tournamentName}</h4>
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <Calendar size={12}/>
-                        <span className="text-[10px] font-black uppercase tracking-widest">{ticket.date}</span>
-                      </div>
-                    </div>
-                    <div className="mt-auto flex flex-col items-center">
-                      <div className="p-4 bg-white rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-500">
-                        <QrCode size={120} className="text-black" />
-                      </div>
-                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-4">{ticket.qrCode}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="max-w-6xl mx-auto pb-12">
+            <DigitalPasses tickets={tickets} />
           </div>
         )}
 
@@ -681,40 +807,23 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-      </main>
+          </div>
+        </main>
+      </div>
 
-      {/* Fixed Bottom Navigation Dock (Optimized for both Desktop and Mobile ergonomic thumb zones) */}
-      <nav className="fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 flex justify-around items-center p-3.5 mobile-bottom-nav z-[150] shadow-[0_-10px_30px_rgba(0,0,0,0.6)]">
-        <NavButton icon={<Gamepad2 />} label="Lobby" active={activePanel === PanelType.MAIN} onClick={() => { setActivePanel(PanelType.MAIN); setShowMoreMenu(false); }} />
-        <NavButton icon={<Store />} label="Armory" active={activePanel === PanelType.STORE} onClick={() => { setActivePanel(PanelType.STORE); setShowMoreMenu(false); }} />
-        <div className="relative" ref={moreMenuRef}>
-          <NavButton icon={showMoreMenu ? <X /> : <LayoutGrid />} label="More" active={isMoreActive} onClick={() => setShowMoreMenu(!showMoreMenu)} className={showMoreMenu ? 'text-primary' : ''} />
-          {showMoreMenu && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-72 glass-panel rounded-[2.5rem] border border-white/10 shadow-2xl overflow-y-auto max-h-[60vh] custom-scrollbar py-3 animate-in slide-in-from-bottom-4 fade-in duration-300 z-[160]">
-              <div className="px-8 py-3 border-b border-white/5 mb-2 sticky top-0 bg-black/40 backdrop-blur-md z-10">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.25em]">Access Systems</p>
-              </div>
-              <div className="px-8 pt-3 pb-1 text-[9px] font-black uppercase tracking-[0.25em] text-sky-200/80">Compete</div>
-              <MoreMenuItem icon={<Swords />} label="Encarto Arena" active={activePanel === PanelType.ARENA} onClick={() => { setActivePanel(PanelType.ARENA); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<Trophy />} label="Tournaments" active={activePanel === PanelType.TOURNAMENTS} onClick={() => { setActivePanel(PanelType.TOURNAMENTS); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<CalendarDays />} label="Fixtures" active={activePanel === PanelType.FIXTURES} onClick={() => { setActivePanel(PanelType.FIXTURES); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<Swords />} label="Skill Duels" active={activePanel === PanelType.PVP} onClick={() => { setActivePanel(PanelType.PVP); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<Medal />} label="Hall of Fame" active={activePanel === PanelType.HALL_OF_FAME} onClick={() => { setActivePanel(PanelType.HALL_OF_FAME); setShowMoreMenu(false); }} />
-              <div className="mx-6 my-2 border-t border-white/[.06]" />
-              <div className="px-8 pt-2 pb-1 text-[9px] font-black uppercase tracking-[0.25em] text-violet-200/80">Community</div>
-              <MoreMenuItem icon={<Users />} label="Squad Hub" active={activePanel === PanelType.TEAMS} onClick={() => { setActivePanel(PanelType.TEAMS); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<Newspaper />} label="News Feed" active={activePanel === PanelType.BLOG} onClick={() => { setActivePanel(PanelType.BLOG); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<MonitorPlay />} label="Stream Hub" active={activePanel === PanelType.STREAMING} onClick={() => { setActivePanel(PanelType.STREAMING); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<MessageSquare />} label="Chat Hub" active={activePanel === PanelType.CHAT} onClick={() => { setActivePanel(PanelType.CHAT); setShowMoreMenu(false); }} />
-              <MoreMenuItem icon={<Bell />} label="Comms" active={activePanel === PanelType.NOTIFICATIONS} onClick={() => { setActivePanel(PanelType.NOTIFICATIONS); setShowHeaderNotifications(false); setShowMoreMenu(false); }} />
-              <div className="mx-6 my-2 border-t border-white/[.06]" />
-              <div className="px-8 pt-2 pb-1 text-[9px] font-black uppercase tracking-[0.25em] text-fuchsia-200/80">Platform</div>
-              {hasOrganizerRole && <MoreMenuItem icon={<ShieldCheck />} label="Host Console" active={activePanel === PanelType.ORGANIZER} onClick={() => { setActivePanel(PanelType.ORGANIZER); setShowMoreMenu(false); }} />}
-            </div>
-          )}
-        </div>
-        <NavButton icon={<UserIcon />} label="Profile" active={activePanel === PanelType.ADMIN} onClick={() => { setActivePanel(PanelType.ADMIN); setShowMoreMenu(false); setProfileTab('identity'); }} />
-      </nav>
+      {/* Floating Bottom Tab Bar on Mobile (under 768px or activeIsMobile) */}
+      {activeIsMobile && (
+        <MobileNav 
+          activePanel={activePanel}
+          profileTab={profileTab}
+          onSelectTab={handleMobileTabSelect}
+          onSelectPanel={handleSelectPanel}
+          showMoreSheet={showMoreMenu}
+          setShowMoreSheet={setShowMoreMenu}
+          profile={profile}
+          hasOrganizerRole={hasOrganizerRole}
+        />
+      )}
 
       <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" />
     </div>

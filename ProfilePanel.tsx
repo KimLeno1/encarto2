@@ -36,6 +36,7 @@ import { PlayerProfile, AnimeTheme, ShopItem } from './types.ts';
 import { SectionLoader } from './components.tsx';
 import { SHOP_ITEMS } from './mockData.ts';
 import { api } from './apiClient.ts';
+import { WalletEconomyCard } from './WalletEconomyCard.tsx';
 
 interface ProfilePanelProps {
   profile: PlayerProfile;
@@ -665,22 +666,12 @@ const ProfilePanel: React.FC<ProfilePanelProps> = ({
               )}
 
               {profileTab === 'wallet' && (
-                <div className="space-y-8 animate-in fade-in duration-300">
-                  <h4 className="text-2xl font-black text-white uppercase tracking-widest flex items-center gap-3"><Wallet className="text-primary" /> Encarto Wallet</h4>
-                  <div className="glass-panel p-12 rounded-[3rem] bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border-2 border-primary/20 flex flex-col items-center text-center">
-                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-4">Current Digital Capital</p>
-                    <h5 className="text-6xl font-black text-white tracking-tighter uppercase">{profile.balance.toFixed(2)} <span className="text-sm text-primary">M3GA</span></h5>
-                    <div className="mt-12 grid grid-cols-2 gap-6 w-full max-w-md">
-                      <button onClick={onDeposit} className="py-5 bg-primary text-white rounded-[2rem] font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-primary/30"><Plus size={18} /> Deposit</button>
-                      <button onClick={onWithdraw} className="py-5 bg-white/5 border border-white/10 text-white rounded-[2rem] font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 hover:bg-white/10 active:scale-95 transition-all"><CircleMinus size={18} /> Withdraw</button>
-                    </div>
-                  </div>
-                  
-                  <div className="p-6 bg-white/5 border border-white/5 rounded-3xl">
-                     <h6 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Transaction Protocol</h6>
-                     <p className="text-xs text-gray-400 leading-relaxed italic">M3GA coins are verified through the Encarto Ledger. Withdrawals may require up to 15 minutes for blockchain validation in high-load scenarios.</p>
-                  </div>
-                </div>
+                <WalletEconomyCard 
+                  profile={profile} 
+                  setProfile={setProfile as any}
+                  onDeposit={onDeposit} 
+                  onWithdraw={onWithdraw} 
+                />
               )}
 
               {(profileTab !== 'wallet' && profileTab !== 'armory' && profileTab !== 'progression') && (

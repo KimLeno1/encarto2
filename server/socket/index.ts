@@ -6,17 +6,17 @@ import { matchmakingService, MatchSession } from '../services/matchmakingService
 import { ArenaAuthoritativeSession } from '../game/arenaAuthoritativeSession.js';
 import { playerInputSchema, attackInputSchema } from '../validators/matchmaking.js';
 
+import { isOriginAllowed } from '../app.js';
+
 // Map of active authoritative sessions: matchId -> ArenaAuthoritativeSession
 export const activeGameSessions = new Map<string, ArenaAuthoritativeSession>();
 
 export function setupSocketIO(httpServer: HttpServer): SocketIOServer {
-  const allowedOrigins = new Set(
-    env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
-  );
   const io = new SocketIOServer(httpServer, {
+    destroyUpgrade: false,
     cors: {
       origin(origin, callback) {
-        if (!origin || allowedOrigins.has(origin)) {
+        if (isOriginAllowed(origin)) {
           callback(null, true);
           return;
         }
@@ -26,8 +26,13 @@ export function setupSocketIO(httpServer: HttpServer): SocketIOServer {
     },
     // CORS middleware does not protect the WebSocket upgrade itself; enforce Origin here too.
     allowRequest: (req, callback) => {
+      // If this is not a Socket.IO request (e.g. Vite HMR), do not block it here
+      if (!req.url?.startsWith('/socket.io')) {
+        callback(null, true);
+        return;
+      }
       const origin = req.headers.origin;
-      if (!origin || allowedOrigins.has(origin)) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
         return;
       }

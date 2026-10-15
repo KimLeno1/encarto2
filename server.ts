@@ -13,8 +13,18 @@ async function bootstrap() {
 
   // Mount Vite development middlewares in dev mode
   if (env.NODE_ENV !== 'production') {
+    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: isHmrDisabled
+          ? false
+          : {
+              server,
+              clientPort: 443,
+            },
+        watch: isHmrDisabled ? null : {},
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

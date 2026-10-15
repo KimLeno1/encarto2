@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .bg-dots-pattern {
+    background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+  .bg-grid-pattern {
+    background-image: linear-gradient(to right, currentColor 1px, transparent 1px),
+      linear-gradient(to bottom, currentColor 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .bg-lines-pattern {
+    background-image: linear-gradient(to bottom, currentColor 1px, transparent 1px);
+    background-size: 100% 28px;
+  }
+
+  /* Encarto Neon Accents */
+  .neon-glow-purple {
+    box-shadow: 0 0 25px -4px rgba(168, 85, 247, 0.45), 0 0 10px -2px rgba(192, 132, 252, 0.3);
+  }
+  .neon-glow-cyan {
+    box-shadow: 0 0 25px -4px rgba(56, 189, 248, 0.45), 0 0 10px -2px rgba(34, 211, 238, 0.3);
+  }
+  .neon-glow-dual {
+    box-shadow: 0 0 25px -3px rgba(168, 85, 247, 0.4), 0 0 35px -3px rgba(56, 189, 248, 0.3);
+  }
+  .neon-text-purple {
+    text-shadow: 0 0 12px rgba(192, 132, 252, 0.65);
+  }
+  .neon-text-cyan {
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.65);
+  }
+}
+
+/* Cosmic Encarto subtle pulse animation */
+@keyframes ethereal-pulse {
+  0%, 100% {
+    opacity: 0.85;
+    filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.4));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 22px rgba(56, 189, 248, 0.6));
+  }
+}
+
+.animate-ethereal {
+  animation: ethereal-pulse 4s ease-in-out infinite;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.5);
+}

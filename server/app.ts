@@ -17,15 +17,31 @@ app.use(
   })
 );
 
-// CORS: allow only explicitly configured browser origins. Requests without an Origin
-// (for example, server-to-server health checks) are not browser CORS requests.
-const allowedOrigins = new Set(
-  env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+// CORS: allow explicitly configured browser origins and APP_URL
+const configuredOrigins = new Set(
+  env.CORS_ORIGIN.split(',').map((origin) => origin.trim().replace(/\/$/, '')).filter(Boolean)
 );
+if (process.env.APP_URL) {
+  configuredOrigins.add(process.env.APP_URL.trim().replace(/\/$/, ''));
+}
+
+export function isOriginAllowed(origin?: string): boolean {
+  if (!origin) return true;
+  const normalized = origin.trim().replace(/\/$/, '');
+  if (configuredOrigins.has(normalized)) return true;
+  if (process.env.APP_URL && normalized === process.env.APP_URL.trim().replace(/\/$/, '')) return true;
+  if (env.NODE_ENV !== 'production') {
+    if (normalized.includes('localhost') || normalized.includes('127.0.0.1') || normalized.endsWith('.run.app')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.has(origin)) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
         return;
       }
@@ -35,8 +51,7 @@ app.use(
   })
 );
 
- // CORS headers alone do not prevent a cross-origin request from reaching a state-changing
- // endpoint. Enforce the Origin allowlist for browser mutation requests as a CSRF defense.
+// Enforce the Origin allowlist for browser mutation requests as a CSRF defense.
 app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     next();
@@ -44,7 +59,7 @@ app.use((req, res, next) => {
   }
 
   const origin = req.get('Origin');
-  if (origin && !allowedOrigins.has(origin)) {
+  if (origin && !isOriginAllowed(origin)) {
     res.status(403).json({ error: 'Untrusted request origin.' });
     return;
   }

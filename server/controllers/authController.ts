@@ -14,6 +14,7 @@ import {
 } from '../utils/session.js';
 import { logAuditEvent } from '../utils/audit.js';
 import { env } from '../config/env.js';
+import { DEMO_ACCOUNTS, findMatchingDemoAccount } from '../config/demoAccounts.js';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -128,35 +129,114 @@ export class AuthController {
 
       const { emailOrUsername, password } = parsed.data;
 
-      // Find user by username or email
-      const user = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { email: emailOrUsername.toLowerCase() },
-            { username: { equals: emailOrUsername, mode: 'insensitive' } },
-          ],
-        },
-        include: {
-          profile: true,
-        },
-      });
+      // 1. Check if user provided demo credentials (instant fallback & demo access)
+      const demoAcc = findMatchingDemoAccount(emailOrUsername, password);
+      if (demoAcc) {
+        const token = createSessionToken({
+          userId: demoAcc.user.id,
+          username: demoAcc.user.username,
+          role: demoAcc.user.role,
+          createdAt: Date.now(),
+        });
 
-      // Constant-time check / generic auth error to prevent user enumeration
-      const dummyHash = '$2b$12$e8pAqv8y/R0yR3gXqA0t7uX2mE34p7m2fU4x7m8p9q1w2e3r4t5y6';
-      const isMatch = user
-        ? await bcrypt.compare(password, user.passwordHash)
-        : await bcrypt.compare(password, dummyHash);
+        res.cookie('encarto_session', token, {
+          httpOnly: true,
+          secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
 
-      if (!user || !isMatch) {
-        res.status(401).json({ error: 'Invalid identification credentials.' });
+        res.json({
+          message: `Station access granted. Welcome ${demoAcc.label}.`,
+          user: demoAcc.user,
+        });
         return;
       }
 
-      // Create session token
+      // 2. Query database for registered user
+      try {
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: emailOrUsername.toLowerCase() },
+              { username: { equals: emailOrUsername, mode: 'insensitive' } },
+            ],
+          },
+          include: {
+            profile: true,
+          },
+        });
+
+        const dummyHash = '$2b$12$e8pAqv8y/R0yR3gXqA0t7uX2mE34p7m2fU4x7m8p9q1w2e3r4t5y6';
+        const isMatch = user
+          ? await bcrypt.compare(password, user.passwordHash)
+          : await bcrypt.compare(password, dummyHash);
+
+        if (!user || !isMatch) {
+          res.status(401).json({ 
+            error: 'Invalid identification credentials. For instant demo access, use Username: demo_pilot (Password: EncartoDemo2026!) or click Demo Login.' 
+          });
+          return;
+        }
+
+        const token = createSessionToken({
+          userId: user.id,
+          username: user.username,
+          role: user.role,
+          createdAt: Date.now(),
+        });
+
+        res.cookie('encarto_session', token, {
+          httpOnly: true,
+          secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        await logAuditEvent({
+          action: 'USER_LOGIN',
+          performedBy: user.id,
+          details: { username: user.username },
+          ipAddress: req.ip,
+        });
+
+        res.json({
+          message: 'Station access granted.',
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            rank: user.rank,
+            exp: user.exp,
+            balance: Number(user.balance),
+            avatarUrl: user.avatarUrl,
+            bio: user.bio,
+            profile: user.profile,
+          },
+        });
+      } catch (dbErr) {
+        // If DB is offline, give clear hint about demo credentials
+        res.status(401).json({ 
+          error: 'Invalid credentials. For quick demo access, use Username: demo_pilot (Password: EncartoDemo2026!) or click Instant Demo Login.' 
+        });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async demoLogin(req: Request, res: Response): Promise<void> {
+    try {
+      const requestedRole = (req.body?.role || 'pilot').toString().toLowerCase();
+      const demoAcc = DEMO_ACCOUNTS.find(
+        (a) => a.key === requestedRole || (requestedRole === 'player' && a.key === 'pilot')
+      ) || DEMO_ACCOUNTS[0];
+
       const token = createSessionToken({
-        userId: user.id,
-        username: user.username,
-        role: user.role,
+        userId: demoAcc.user.id,
+        username: demoAcc.user.username,
+        role: demoAcc.user.role,
         createdAt: Date.now(),
       });
 
@@ -167,30 +247,12 @@ export class AuthController {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
-      await logAuditEvent({
-        action: 'USER_LOGIN',
-        performedBy: user.id,
-        details: { username: user.username },
-        ipAddress: req.ip,
-      });
-
       res.json({
-        message: 'Station access granted.',
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          rank: user.rank,
-          exp: user.exp,
-          balance: Number(user.balance),
-          avatarUrl: user.avatarUrl,
-          bio: user.bio,
-          profile: user.profile,
-        },
+        message: `Station access granted. Welcome ${demoAcc.label}.`,
+        user: demoAcc.user,
       });
-    } catch (error) {
-      next(error);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to initialize demo session.' });
     }
   }
 
@@ -211,38 +273,62 @@ export class AuthController {
         return;
       }
 
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.id },
-        include: {
-          profile: true,
-          items: {
-            include: {
-              item: true,
-            },
-          },
-        },
-      });
-
-      if (!user) {
-        res.status(404).json({ error: 'User profile not found.' });
-        return;
+      // Check if this is a demo user session
+      if (req.user.id.startsWith('demo-')) {
+        const demoAcc = DEMO_ACCOUNTS.find((a) => a.user.id === req.user?.id);
+        if (demoAcc) {
+          res.json({ user: demoAcc.user });
+          return;
+        }
       }
 
-      res.json({
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          rank: user.rank,
-          exp: user.exp,
-          balance: Number(user.balance),
-          avatarUrl: user.avatarUrl,
-          bio: user.bio,
-          profile: user.profile,
-          ownedItems: user.items.map((i) => i.itemId),
-        },
-      });
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: req.user.id },
+          include: {
+            profile: true,
+            items: {
+              include: {
+                item: true,
+              },
+            },
+          },
+        });
+
+        if (!user) {
+          // Fallback if demo ID
+          const demoAcc = DEMO_ACCOUNTS.find((a) => a.user.id === req.user?.id);
+          if (demoAcc) {
+            res.json({ user: demoAcc.user });
+            return;
+          }
+          res.status(404).json({ error: 'User profile not found.' });
+          return;
+        }
+
+        res.json({
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            rank: user.rank,
+            exp: user.exp,
+            balance: Number(user.balance),
+            avatarUrl: user.avatarUrl,
+            bio: user.bio,
+            profile: user.profile,
+            ownedItems: user.items.map((i) => i.itemId),
+          },
+        });
+      } catch (dbErr) {
+        const demoAcc = DEMO_ACCOUNTS.find((a) => a.user.id === req.user?.id);
+        if (demoAcc) {
+          res.json({ user: demoAcc.user });
+          return;
+        }
+        throw dbErr;
+      }
     } catch (error) {
       next(error);
     }
